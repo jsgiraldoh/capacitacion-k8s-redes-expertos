@@ -1,0 +1,135 @@
+# =============================================================
+# Consumidor — Desbloquear un PVC en WaitForFirstConsumer
+# -------------------------------------------------------------
+# Módulo 5 · Sesión 5
+#
+# PARA QUÉ SIRVE ESTE ARCHIVO
+# Si al aplicar 04-pvc-dinamico.yaml el PVC se queda en Pending
+# y al hacer describe aparece este evento:
+#
+#   Type    Reason                Message
+#   Normal  WaitForFirstConsumer  waiting for first consumer to
+#                                 be created before binding
+#
+# ...NO es un error. Fíjese en el tipo: dice Normal, no Warning.
+# La StorageClass está esperando a propósito a que exista un Pod
+# que use el PVC. Este archivo es ese Pod.
+#
+# -------------------------------------------------------------
+# EL ORDEN ES CONTRAINTUITIVO
+# -------------------------------------------------------------
+# Lo que uno espera:
+#
+#   Creo el PVC  →  Kubernetes crea el disco
+#                →  después llega un Pod y lo usa
+#
+# Lo que realmente ocurre:
+#
+#   Creo el PVC  →  Kubernetes NO hace nada, se queda esperando
+#                →  Llega un Pod que nombra ese PVC
+#                →  El Scheduler decide: "este Pod va al nodo X"
+#                →  AHORA el provisionador crea el disco EN EL NODO X
+#                →  El PVC se enlaza (Bound)
+#
+# El Pod no "conectó" el PVC. El Pod fue LA SEÑAL QUE FALTABA
+# para que Kubernetes supiera DÓNDE crear el disco.
+#
+# -------------------------------------------------------------
+# POR QUÉ NECESITA ESA SEÑAL
+# -------------------------------------------------------------
+# El provisionador local (rancher.io/local-path en Rancher
+# Desktop y k3s) no crea discos en la nube: crea UNA CARPETA EN
+# EL DISCO DURO DE UN NODO. Y una carpeta del nodo A no existe
+# en el nodo B.
+#
+# Eso lo enfrenta a un problema de orden:
+#
+#   - Si crea la carpeta ANTES, tiene que adivinar en qué nodo
+#     correrá el Pod. Si se equivoca, el Pod no podrá arrancar
+#     nunca: necesitaría un volumen que está en otra máquina.
+#
+#   - Si crea la carpeta DESPUÉS, ya sabe con certeza dónde va
+#     el Pod y la crea justo ahí.
+#
+# Por eso espera. El campo volumeBindingMode: WaitForFirstConsumer
+# significa literalmente "espera al primer consumidor".
+#
+# UNA ANALOGÍA
+# Es como pedir una silla para una reunión. Si le preguntan
+# "¿en qué sala?" y usted aún no lo sabe, lo sensato es esperar
+# a que se decida la sala antes de llevar la silla. Si la llevan
+# antes a la sala equivocada, hay que moverla, y con un disco
+# local eso no se puede hacer.
+# =============================================================
+apiVersion: v1
+kind: Pod
+metadata:
+  name: consumidor
+  labels:
+    app: consumidor
+spec:
+  containers:
+    - name: app
+      image: nginx:1.25
+      volumeMounts:
+        - name: datos
+          mountPath: /datos      # aquí aparecerá el volumen
+
+  volumes:
+    - name: datos
+      persistentVolumeClaim:
+        claimName: pvc-dinamico  # el PVC de 04-pvc-dinamico.yaml
+
+# -------------------------------------------------------------
+# LA SECUENCIA COMPLETA
+# -------------------------------------------------------------
+# 1) Crear el PVC y comprobar que NO se enlaza
+#    kubectl apply -f 04-pvc-dinamico.yaml
+#    kubectl get pvc
+#    # STATUS: Pending
+#
+# 2) Leer POR QUÉ está esperando
+#    kubectl describe pvc pvc-dinamico
+#    # Evento: Normal / WaitForFirstConsumer
+#
+# 3) Crear el consumidor
+#    kubectl apply -f 05-consumidor-pvc-dinamico.yaml
+#
+# 4) Ahora sí: el PVC se enlaza y el PV aparece solo
+#    kubectl get pvc
+#    # STATUS: Bound
+#    kubectl get pv
+#    # un PV con nombre generado automáticamente
+#
+# 5) Comprobar el montaje dentro del contenedor
+#    kubectl exec consumidor -- df -h /datos
+#    kubectl exec consumidor -- touch /datos/prueba.txt
+#    kubectl exec consumidor -- ls -la /datos
+#
+# -------------------------------------------------------------
+# LOS DOS MODOS DE ENLACE (volumeBindingMode)
+# -------------------------------------------------------------
+# Compruebe cuál usa su clúster:
+#
+#   kubectl get storageclass
+#
+# | Modo                  | Cuándo crea el disco      | Dónde se ve        |
+# |-----------------------|---------------------------|--------------------|
+# | Immediate             | Al crear el PVC           | DOKS, EKS, AKS     |
+# | WaitForFirstConsumer  | Al crear el primer Pod    | Rancher Desktop,   |
+# |                       |                           | k3s, almacenamiento|
+# |                       |                           | local en general   |
+#
+# EL CONTRASTE DIDÁCTICO:
+# el mismo 04-pvc-dinamico.yaml se comporta distinto según el
+# clúster. En DigitalOcean pasa a Bound solo; en Rancher Desktop
+# necesita este consumidor. La columna VOLUMEBINDINGMODE de
+# kubectl get storageclass explica la diferencia.
+#
+# -------------------------------------------------------------
+# LIMPIEZA
+# -------------------------------------------------------------
+# kubectl delete -f 05-consumidor-pvc-dinamico.yaml
+# kubectl delete -f 04-pvc-dinamico.yaml
+# kubectl get pv    # con reclaimPolicy Delete, desaparece solo
+# -------------------------------------------------------------

@@ -63,8 +63,36 @@ spec:
 #    kubectl apply -f 03-deployment-con-pvc.yaml
 #
 # 2) Escribir un dato dentro del volumen
+#
+#    RECOMENDADO: entrar al contenedor y escribir ahí dentro.
+#    Funciona igual desde Windows, Linux y macOS, porque el
+#    comando lo interpreta la shell del contenedor y no la de
+#    su equipo.
+#
+#    kubectl exec -it deploy/web-persistente -- sh
+#
+#    # Ya dentro del contenedor:
+#    echo "<h1>Dato guardado el $(date)</h1>" > /usr/share/nginx/html/index.html
+#    cat /usr/share/nginx/html/index.html
+#    exit
+#
+#    ---------------------------------------------------------
+#    EN UNA SOLA LÍNEA, según su sistema:
+#
+#    Linux / macOS (bash o zsh):
 #    kubectl exec deploy/web-persistente -- \
 #      sh -c 'echo "<h1>Dato guardado el $(date)</h1>" > /usr/share/nginx/html/index.html'
+#
+#    Windows (PowerShell): lo anterior NO funciona.
+#    PowerShell elimina las comillas simples antes de pasar los
+#    argumentos, así que sh recibe <h1> como un archivo y falla
+#    con "cannot open h1: No such file". Use en su lugar:
+#
+#    kubectl exec deploy/web-persistente -- sh -c "date > /usr/share/nginx/html/index.html"
+#
+#    O bien --% para que PowerShell no interprete nada:
+#    kubectl exec deploy/web-persistente --% -- sh -c 'echo "<h1>Dato</h1>" > /usr/share/nginx/html/index.html'
+#    ---------------------------------------------------------
 #
 # 3) Comprobar que se lee
 #    kubectl exec deploy/web-persistente -- cat /usr/share/nginx/html/index.html

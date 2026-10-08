@@ -42,6 +42,28 @@ spec:
 # # El PV apareció SOLO, con un nombre generado automáticamente
 # kubectl get pv
 #
+# -------------------------------------------------------------
+# ¿SE QUEDÓ EN PENDING Y NO AVANZA?
+# -------------------------------------------------------------
+# No necesariamente es un error. Revise la causa:
+#
+#   kubectl describe pvc pvc-dinamico
+#
+# Si el evento dice:
+#   Normal  WaitForFirstConsumer  waiting for first consumer...
+#
+# ...su StorageClass espera a propósito a que exista un Pod que
+# use el PVC. Pasa en Rancher Desktop, k3s y en general con
+# almacenamiento local. Fíjese en el tipo del evento: Normal,
+# no Warning.
+#
+# La solución es aplicar el consumidor:
+#   kubectl apply -f 05-consumidor-pvc-dinamico.yaml
+#   kubectl get pvc      # ahora sí: Bound
+#
+# Compruebe el modo de su clúster en la columna final de:
+#   kubectl get storageclass
+#
 # En DigitalOcean, además, el disco ya existe en el panel:
 # Manage → Volumes. Ese disco se factura mientras exista.
 #
