@@ -1,0 +1,78 @@
+# =============================================================
+# emptyDir — El patrón sidecar
+# -------------------------------------------------------------
+# Dos contenedores en el MISMO Pod comparten un directorio:
+#   - generador: escribe la hora cada 5 segundos
+#   - nginx:     sirve ese archivo por HTTP
+#
+# Es el uso más común de emptyDir: intercambiar datos entre
+# contenedores del mismo Pod, sin pasar por la red.
+#
+# Al eliminar el Pod, el directorio y su contenido desaparecen.
+# =============================================================
+apiVersion: v1
+kind: Pod
+metadata:
+  name: emptydir-sidecar
+  labels:
+    app: emptydir-demo
+spec:
+  containers:
+    # Contenedor 1: escribe en el volumen
+    - name: generador
+      image: busybox:1.36
+      command: ["/bin/sh", "-c"]
+      args:
+        - |
+          while true; do
+            echo "<h1>Hora: $(date)</h1><p>Pod: $HOSTNAME</p>" > /datos/index.html
+            sleep 5
+          done
+      volumeMounts:
+        - name: compartido
+          mountPath: /datos
+
+    # Contenedor 2: lee del MISMO volumen y lo publica
+    - name: nginx
+      image: nginx:1.25
+      ports:
+        - containerPort: 80
+      volumeMounts:
+        - name: compartido
+          mountPath: /usr/share/nginx/html
+
+  volumes:
+    # El volumen efímero: nace y muere con el Pod
+    - name: compartido
+      emptyDir: {}
+
+---
+# Service para poder ver el resultado en el navegador
+apiVersion: v1
+kind: Service
+metadata:
+  name: emptydir-demo-svc
+spec:
+  type: ClusterIP
+  selector:
+    app: emptydir-demo
+  ports:
+    - port: 80
+      targetPort: 80
+
+# -------------------------------------------------------------
+# CÓMO PROBARLO
+# -------------------------------------------------------------
+# kubectl apply -f 01-emptydir-sidecar.yaml
+#
+# # Ver el contenido que genera el sidecar
+# kubectl exec emptydir-sidecar -c nginx -- cat /usr/share/nginx/html/index.html
+#
+# # Verlo en el navegador
+# kubectl port-forward svc/emptydir-demo-svc 8080:80
+# # abrir http://localhost:8080  (refrescar: la hora cambia)
+#
+# # LA DEMOSTRACIÓN: borrar el Pod y comprobar que no hay nada que recuperar
+# kubectl delete pod emptydir-sidecar
+# kubectl get pods          # ya no existe, y nadie lo recrea
+# -------------------------------------------------------------

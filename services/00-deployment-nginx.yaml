@@ -1,0 +1,48 @@
+# =============================================================
+# Deployment compartido para TODOS los ejemplos de Service
+# -------------------------------------------------------------
+# Módulo 4 · Sesión 3
+#
+# POR QUÉ ESTÁ AQUÍ Y NO DENTRO DE CADA SUBCARPETA:
+# antes, cada ejemplo (clusterip, nodeport, lb) traía su propio
+# Deployment llamado "nginx-deployment". Al aplicar uno después
+# de otro se sobrescribían entre sí, y como usaban imágenes
+# distintas, el resultado dependía del orden de aplicación.
+#
+# Ahora el Deployment se aplica UNA vez y los tres Services
+# apuntan a él por selector. Es también lo correcto
+# conceptualmente: un conjunto de Pods puede ser expuesto por
+# varios Services a la vez.
+#
+# LA IMAGEN: nginxdemos/hello muestra en la página el nombre
+# del Pod que atendió la petición. Eso permite VER el balanceo
+# de carga al refrescar el navegador.
+# =============================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+  labels:
+    app: nginx
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx        # esta etiqueta es la que buscan los Services
+    spec:
+      containers:
+        - name: nginx
+          image: nginxdemos/hello
+          ports:
+            - containerPort: 80
+
+# -------------------------------------------------------------
+# APLICAR ESTO PRIMERO, SIEMPRE
+# -------------------------------------------------------------
+# kubectl apply -f 00-deployment-nginx.yaml
+# kubectl get pods -l app=nginx -o wide
+# -------------------------------------------------------------

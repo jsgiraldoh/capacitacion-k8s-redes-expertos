@@ -1,0 +1,89 @@
+# =============================================================
+# Deployment que CONSUME el PVC
+# -------------------------------------------------------------
+# Aquí se ve la pieza final: el Pod no sabe nada del PV ni de
+# la infraestructura. Solo nombra un PVC.
+#
+# Fíjese en los dos bloques que siempre van juntos:
+#   volumes       → a nivel del Pod: QUÉ volumen y de dónde sale
+#   volumeMounts  → dentro del contenedor: EN QUÉ RUTA aparece
+# El campo "name" es lo que los enlaza.
+# =============================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-persistente
+spec:
+  replicas: 1
+  # IMPORTANTE: con ReadWriteOnce, no suba a 2 o más réplicas.
+  # Solo arrancaría el Pod del nodo que tomó el disco; los demás
+  # quedarían en Pending. Para varias réplicas con estado se usa
+  # un StatefulSet con volumeClaimTemplates.
+
+  selector:
+    matchLabels:
+      app: web-persistente
+
+  template:
+    metadata:
+      labels:
+        app: web-persistente
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:1.25
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - name: datos
+              mountPath: /usr/share/nginx/html
+
+      volumes:
+        - name: datos
+          persistentVolumeClaim:
+            claimName: pvc-demo      # el PVC del archivo anterior
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-persistente-svc
+spec:
+  type: ClusterIP
+  selector:
+    app: web-persistente
+  ports:
+    - port: 80
+      targetPort: 80
+
+# -------------------------------------------------------------
+# LA PRUEBA DE PERSISTENCIA (el ejercicio central del módulo)
+# -------------------------------------------------------------
+# 1) Desplegar
+#    kubectl apply -f 03-deployment-con-pvc.yaml
+#
+# 2) Escribir un dato dentro del volumen
+#    kubectl exec deploy/web-persistente -- \
+#      sh -c 'echo "<h1>Dato guardado el $(date)</h1>" > /usr/share/nginx/html/index.html'
+#
+# 3) Comprobar que se lee
+#    kubectl exec deploy/web-persistente -- cat /usr/share/nginx/html/index.html
+#
+# 4) BORRAR EL POD (no el Deployment)
+#    kubectl delete pod -l app=web-persistente
+#
+# 5) Esperar al Pod nuevo y volver a leer: EL DATO SIGUE AHÍ
+#    kubectl get pods -w
+#    kubectl exec deploy/web-persistente -- cat /usr/share/nginx/html/index.html
+#
+# Compare con el ejemplo de emptyDir: allí el dato se perdió.
+# Esa es toda la diferencia entre efímero y persistente.
+#
+# -------------------------------------------------------------
+# LIMPIEZA
+# -------------------------------------------------------------
+# kubectl delete -f 03-deployment-con-pvc.yaml
+# kubectl delete -f 02-pvc-estatico.yaml
+# kubectl get pv     # con Retain, el PV queda en estado Released
+# kubectl delete -f 01-pv-estatico.yaml
+# -------------------------------------------------------------

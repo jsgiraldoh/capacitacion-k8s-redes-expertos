@@ -1,0 +1,61 @@
+# =============================================================
+# ReplicaSet — El primer controlador
+# -------------------------------------------------------------
+# Módulo 3 · Sesión 2
+#
+# Su única responsabilidad: mantener vivo un número determinado
+# de Pods idénticos. Si sobran, elimina; si faltan, crea.
+#
+# Los tres campos que hay que entender:
+#   replicas  → el estado deseado
+#   selector  → cómo reconoce cuáles Pods le pertenecen
+#   template  → el molde con el que crea un Pod nuevo
+#
+# Las etiquetas de template DEBEN coincidir con las de selector,
+# o la API rechaza el manifiesto.
+# =============================================================
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: frontend
+  labels:
+    app: guestbook
+    tier: frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      tier: frontend
+  template:
+    metadata:
+      labels:
+        tier: frontend
+    spec:
+      containers:
+        - name: php-redis
+          image: gcr.io/google_samples/gb-frontend:v5
+
+# -------------------------------------------------------------
+# CÓMO PROBARLO
+# -------------------------------------------------------------
+# kubectl apply -f 01-replicaset.yaml
+# kubectl get rs
+# kubectl get pods -l tier=frontend -o wide
+#
+# LA AUTOREPARACIÓN (el ejercicio central)
+# Terminal 1:  kubectl get pods -l tier=frontend -w
+# Terminal 2:  kubectl delete pod <nombre-de-un-pod>
+# En la Terminal 1 verá morir uno y nacer otro en segundos.
+#
+# ESCALAR SIN EDITAR EL ARCHIVO
+# kubectl scale rs frontend --replicas=5
+# kubectl scale rs frontend --replicas=2
+#
+# EL EXPERIMENTO DEL SELECTOR
+# Cambie la etiqueta de UN Pod y "róbeselo" al ReplicaSet:
+#   kubectl label pod <nombre> tier=huerfano --overwrite
+#   kubectl get pods --show-labels
+# El Pod sigue vivo pero ya no le pertenece, así que el
+# ReplicaSet crea otro para volver a su cuenta.
+# Limpie con: kubectl delete pod -l tier=huerfano
+# -------------------------------------------------------------

@@ -1,0 +1,41 @@
+# =============================================================
+# Pod — La unidad mínima de despliegue
+# -------------------------------------------------------------
+# Módulo 3 · Sesión 2
+#
+# Un Pod suelto: creado a mano, sin ningún controlador detrás.
+# Si usted lo borra, o si el nodo falla, NADIE lo recrea.
+# Esa es exactamente la limitación que resuelven los
+# ReplicaSets y los Deployments de las carpetas siguientes.
+# =============================================================
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx
+  labels:
+    app: nginx          # etiqueta: así lo encontrarán los Services
+spec:
+  containers:
+    - name: nginx
+      image: nginx:1.19.1
+      ports:
+        - containerPort: 80
+
+# -------------------------------------------------------------
+# CÓMO PROBARLO
+# -------------------------------------------------------------
+# kubectl apply -f 01-pod-basico.yaml
+#
+# # Estado, IP del Pod y nodo donde quedó
+# kubectl get pods -o wide
+#
+# # Detalle y eventos (los eventos están al final)
+# kubectl describe pod nginx
+#
+# # Logs del contenedor
+# kubectl logs nginx
+#
+# EL EXPERIMENTO IMPORTANTE:
+# kubectl delete pod nginx
+# kubectl get pods        # desapareció y nadie lo recreó
+# -------------------------------------------------------------

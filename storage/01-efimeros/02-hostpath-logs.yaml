@@ -1,0 +1,56 @@
+# =============================================================
+# hostPath — Leer el sistema de archivos del NODO
+# -------------------------------------------------------------
+# El uso clásico y legítimo: un agente que necesita ver algo
+# del host. Así funcionan los DaemonSets de monitoreo y de
+# recolección de logs (Fluent Bit, node-exporter, el propio
+# Calico), que montan rutas del nodo en modo solo lectura.
+#
+# ATENCIÓN: hostPath NO es persistencia. Los datos viven en UN
+# nodo concreto. Si el Pod se reprograma en otro nodo, verá un
+# directorio distinto o vacío.
+# =============================================================
+apiVersion: v1
+kind: Pod
+metadata:
+  name: hostpath-lector-logs
+spec:
+  containers:
+    - name: lector
+      image: busybox:1.36
+      command: ["/bin/sh", "-c", "ls -la /host-logs && sleep 3600"]
+      volumeMounts:
+        - name: logs-del-nodo
+          mountPath: /host-logs
+          readOnly: true          # buena práctica: nunca escribir en el host
+
+  volumes:
+    - name: logs-del-nodo
+      hostPath:
+        path: /var/log            # ruta REAL del nodo, no del contenedor
+        type: Directory           # falla si la ruta no existe
+
+# -------------------------------------------------------------
+# CÓMO PROBARLO
+# -------------------------------------------------------------
+# kubectl apply -f 02-hostpath-logs.yaml
+#
+# # Ver los logs del NODO desde dentro del contenedor
+# kubectl exec hostpath-lector-logs -- ls /host-logs
+#
+# # En qué nodo quedó (esto es lo importante)
+# kubectl get pod hostpath-lector-logs -o wide
+#
+# LA DEMOSTRACIÓN DEL PROBLEMA:
+# si borra el Pod y el Scheduler lo coloca en otro nodo,
+# el contenido de /host-logs será COMPLETAMENTE distinto.
+# Por eso hostPath no sirve para datos de aplicación.
+#
+# -------------------------------------------------------------
+# NOTA DE SEGURIDAD (relevante para el Módulo 6)
+# -------------------------------------------------------------
+# hostPath es un vector de escalada de privilegios: un Pod que
+# monte / o /etc del nodo puede comprometer la máquina completa.
+# En producción se restringe con Pod Security Admission o con
+# políticas de admisión (Kyverno, OPA Gatekeeper).
+# -------------------------------------------------------------

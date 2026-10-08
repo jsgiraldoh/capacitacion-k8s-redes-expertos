@@ -1,0 +1,54 @@
+# =============================================================
+# Service tipo ClusterIP — Solo dentro del clúster
+# -------------------------------------------------------------
+# Módulo 4 · Sesión 3 · Tipo 1 de 3
+#
+# El tipo por defecto. Expone los Pods ÚNICAMENTE hacia otros
+# Pods del clúster. Ningún cliente externo puede alcanzarlo.
+#
+# La ClusterIP no existe en ninguna interfaz de red: es una IP
+# virtual que vive como regla de iptables o IPVS en cada nodo,
+# programada por kube-proxy. Por eso no responde a ping, pero
+# sí atiende conexiones al puerto del Service.
+#
+# Requiere haber aplicado antes ../00-deployment-nginx.yaml
+# =============================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-service
+  labels:
+    app: nginx
+spec:
+  type: ClusterIP
+  selector:
+    app: nginx          # busca Pods con esta etiqueta
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80          # puerto del Service
+      targetPort: 80    # puerto del contenedor
+
+# -------------------------------------------------------------
+# CÓMO PROBARLO
+# -------------------------------------------------------------
+# kubectl apply -f ../00-deployment-nginx.yaml
+# kubectl apply -f 01-service-clusterip.yaml
+#
+# # LA COMPROBACIÓN CLAVE: ¿encontró Pods?
+# kubectl get endpoints nginx-service
+# # Debe listar 3 pares IP:puerto. Si está vacío, el selector
+# # no coincide y NADA funcionará, sin mostrar ningún error.
+#
+# # Probar desde el cliente de diagnóstico
+# kubectl exec deploy/client-deployment -- curl -s http://nginx-service
+#
+# # Ver el balanceo: repita y cambia el nombre del Pod
+# kubectl exec deploy/client-deployment -- \
+#   sh -c 'for i in 1 2 3 4 5; do curl -s http://nginx-service | grep -i hostname; done'
+#
+# EL EXPERIMENTO DEL SELECTOR ROTO
+# kubectl set selector svc nginx-service app=inexistente
+# kubectl get endpoints nginx-service      # queda vacío
+# kubectl set selector svc nginx-service app=nginx   # restaurar
+# -------------------------------------------------------------

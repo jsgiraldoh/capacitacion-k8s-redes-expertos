@@ -1,0 +1,52 @@
+# =============================================================
+# Service tipo LoadBalancer — IP externa dedicada
+# -------------------------------------------------------------
+# Módulo 4 · Sesión 3 · Tipo 3 de 3
+#
+# Pide al proveedor de infraestructura un balanceador real.
+#
+# EN DIGITALOCEAN (DOKS): funciona. Se aprovisiona un Load
+# Balancer y se asigna una IP pública en 1 a 3 minutos.
+# ATENCIÓN: se factura por hora mientras exista (~12 USD/mes).
+# Borrar el Service es lo que libera el balanceador.
+#
+# ON-PREMISE (los 3 nodos con kubeadm): NO funciona. No hay
+# proveedor que atienda la petición, así que EXTERNAL-IP queda
+# en <pending> para siempre. Haría falta MetalLB. Mientras
+# tanto puede usar el NodePort que se crea junto con él.
+# =============================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-service
+  labels:
+    app: nginx
+spec:
+  type: LoadBalancer
+  selector:
+    app: nginx
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+
+# -------------------------------------------------------------
+# CÓMO PROBARLO
+# -------------------------------------------------------------
+# kubectl apply -f ../00-deployment-nginx.yaml
+# kubectl apply -f 03-service-loadbalancer.yaml
+#
+# # Esperar la IP pública (tarda unos minutos)
+# kubectl get svc nginx-service -w
+#
+# # Cuando EXTERNAL-IP deje de ser <pending>:
+# curl http://<EXTERNAL-IP>
+#
+# SI EL BALANCEADOR APARECE "Down" EN EL PANEL DE DO:
+# es normal los primeros minutos. Si persiste, revise:
+#   kubectl get endpoints nginx-service     # ¿hay Pods detrás?
+#   kubectl describe svc nginx-service      # eventos del CCM
+#
+# LIMPIEZA OBLIGATORIA (deja de facturar)
+# kubectl delete -f 03-service-loadbalancer.yaml
+# -------------------------------------------------------------

@@ -1,0 +1,49 @@
+# =============================================================
+# PersistentVolumeClaim — La SOLICITUD
+# -------------------------------------------------------------
+# El usuario pide almacenamiento sin saber de dónde sale.
+# Kubernetes busca un PV que cumpla las tres condiciones:
+#   1. Misma storageClassName
+#   2. Modo de acceso compatible
+#   3. Capacidad suficiente (>= a lo solicitado)
+#
+# Si encuentra uno, los enlaza (Bound). Si no, el PVC se queda
+# en Pending para siempre, sin error visible.
+# =============================================================
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pvc-demo
+spec:
+  accessModes:
+    - ReadWriteOnce           # debe coincidir con lo que ofrece el PV
+
+  storageClassName: manual    # debe coincidir con el PV estático
+
+  resources:
+    requests:
+      storage: 1Gi            # pide 1Gi; el PV ofrece 1Gi → encaja
+
+  selector:
+    matchLabels:
+      tipo: demo-local        # afina la búsqueda por etiquetas del PV
+
+# -------------------------------------------------------------
+# CÓMO PROBARLO
+# -------------------------------------------------------------
+# kubectl apply -f 01-pv-estatico.yaml
+# kubectl apply -f 02-pvc-estatico.yaml
+#
+# # El momento clave: ver el enlace
+# kubectl get pv,pvc
+#
+# Debe ver:
+#   pv-demo-local   1Gi   RWO   Retain   Bound   default/pvc-demo
+#   pvc-demo        Bound pv-demo-local  1Gi     RWO
+#
+# EXPERIMENTO: cambie storageClassName a "otra-cosa" y vuelva a
+# aplicar en un PVC nuevo. Quedará en Pending indefinidamente.
+# Diagnostíquelo con:
+#   kubectl describe pvc <nombre>
+# Los eventos al final explican exactamente por qué no enlazó.
+# -------------------------------------------------------------

@@ -1,0 +1,52 @@
+# =============================================================
+# Deployment — Cliente de diagnóstico de red
+# -------------------------------------------------------------
+# Módulo 3 y 4 · Sesiones 2 y 3
+#
+# Un Pod con netshoot: la caja de herramientas de red más
+# completa para Kubernetes. Trae curl, dig, nslookup, tcpdump,
+# netstat, iperf, nmap y ping.
+#
+# Es la herramienta que usaremos para TODAS las pruebas de
+# conectividad: Services, DNS interno, Ingress y Network
+# Policies. Corre con "sleep infinity" para quedarse disponible
+# sin hacer nada.
+# =============================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: client-deployment
+  labels:
+    app: client
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: client
+  template:
+    metadata:
+      labels:
+        app: client
+    spec:
+      containers:
+        - name: client
+          image: nicolaka/netshoot:latest
+          command: ["sleep", "infinity"]
+
+# -------------------------------------------------------------
+# CÓMO USARLO
+# -------------------------------------------------------------
+# kubectl apply -f 01-deployment-cliente.yaml
+#
+# # Entrar al contenedor
+# kubectl exec -it deploy/client-deployment -- bash
+#
+# Ya dentro, las pruebas que haremos en el Módulo 4:
+#   curl http://nginx-service                 # Service por nombre
+#   nslookup nginx-service                    # DNS interno
+#   dig nginx-service.default.svc.cluster.local
+#   curl -v http://nginx-service              # cabeceras completas
+#
+# # Sin entrar, en una sola línea:
+# kubectl exec deploy/client-deployment -- curl -s http://nginx-service
+# -------------------------------------------------------------

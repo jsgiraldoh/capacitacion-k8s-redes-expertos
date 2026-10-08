@@ -1,0 +1,66 @@
+# =============================================================
+# PVC DINÁMICO — Sin PV escrito a mano
+# -------------------------------------------------------------
+# Compare este archivo con 01 + 02: aquí NO hay PersistentVolume.
+# Solo la solicitud. La StorageClass crea el disco y genera el
+# PV automáticamente.
+#
+# Este es el modelo normal en cualquier nube. En DOKS funciona
+# sin configurar nada, porque el CSI de DigitalOcean ya viene
+# instalado y do-block-storage es la clase por defecto.
+# =============================================================
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pvc-dinamico
+spec:
+  accessModes:
+    - ReadWriteOnce
+
+  # SIN storageClassName: usa la clase marcada como (default)
+  # del clúster, sea cual sea. Esto hace el manifiesto PORTABLE:
+  # el mismo archivo funciona en Minikube, Docker Desktop y DOKS.
+  #
+  # Para fijar una clase concreta de DigitalOcean, descomente:
+  # storageClassName: do-block-storage-retain
+
+  resources:
+    requests:
+      storage: 5Gi
+
+# -------------------------------------------------------------
+# CÓMO PROBARLO
+# -------------------------------------------------------------
+# # Ver qué clases ofrece este clúster y cuál es la (default)
+# kubectl get storageclass
+#
+# kubectl apply -f 04-pvc-dinamico.yaml
+#
+# # Observar la secuencia: Pending → Bound (tarda unos segundos)
+# kubectl get pvc -w
+#
+# # El PV apareció SOLO, con un nombre generado automáticamente
+# kubectl get pv
+#
+# En DigitalOcean, además, el disco ya existe en el panel:
+# Manage → Volumes. Ese disco se factura mientras exista.
+#
+# -------------------------------------------------------------
+# LA COMPARACIÓN QUE VALE LA PENA HACER EN CLASE
+# -------------------------------------------------------------
+#   Estático  → 2 archivos (PV + PVC), el admin hace el trabajo
+#   Dinámico  → 1 archivo  (PVC),      la StorageClass lo hace
+#
+# El Pod que los consume es EXACTAMENTE el mismo en ambos casos.
+# Esa es la ventaja de la abstracción: el desarrollador nunca
+# se entera de si hay una SAN, un NFS o una API de nube detrás.
+#
+# -------------------------------------------------------------
+# LIMPIEZA (importante si está en DigitalOcean)
+# -------------------------------------------------------------
+# kubectl delete -f 04-pvc-dinamico.yaml
+# kubectl get pv   # con la clase por defecto (Delete), desaparece
+#
+# Si usó una clase -retain, el PV queda huérfano y el disco
+# SIGUE FACTURANDO. Hay que borrarlo a mano desde el panel.
+# -------------------------------------------------------------

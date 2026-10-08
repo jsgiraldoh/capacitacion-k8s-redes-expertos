@@ -1,0 +1,56 @@
+# =============================================================
+# PersistentVolume — Aprovisionamiento ESTÁTICO
+# -------------------------------------------------------------
+# El ejemplo clásico de enseñanza: el administrador declara a
+# mano un volumen que ya existe. Aquí usamos hostPath para que
+# funcione en cualquier clúster de laboratorio sin depender de
+# una nube.
+#
+# En un entorno real, este mismo PV apuntaría a un recurso NFS,
+# a un LUN por iSCSI o a una cabina corporativa. Lo único que
+# cambia es el bloque del final; todo lo demás es idéntico.
+# =============================================================
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-demo-local
+  labels:
+    tipo: demo-local          # el PVC lo buscará por esta etiqueta
+spec:
+  capacity:
+    storage: 1Gi              # cuánto ofrece este volumen
+
+  accessModes:
+    - ReadWriteOnce           # un solo nodo puede montarlo en escritura
+
+  persistentVolumeReclaimPolicy: Retain
+  # Retain = al borrar el PVC, los datos NO se destruyen.
+  # La alternativa es Delete, que es el valor por defecto
+  # de la mayoría de StorageClasses dinámicas.
+
+  storageClassName: manual
+  # Un nombre inventado que NO corresponde a ninguna
+  # StorageClass real. Sirve para "emparejar" este PV
+  # con el PVC que pide exactamente esa clase.
+
+  hostPath:
+    path: /mnt/datos-demo
+    type: DirectoryOrCreate   # lo crea en el nodo si no existe
+
+# -------------------------------------------------------------
+# EN UN ENTORNO REAL, el bloque hostPath se reemplaza por:
+# -------------------------------------------------------------
+#   nfs:
+#     server: 10.128.0.69
+#     path: /exports/datos
+#
+# ...y el accessModes pasaría a ReadWriteMany.
+#
+# -------------------------------------------------------------
+# LIMITACIÓN DE ESTE EJEMPLO
+# -------------------------------------------------------------
+# Con hostPath, los datos viven en el nodo donde se montó.
+# En un clúster de varios nodos, si el Pod se reprograma a otro
+# nodo encontrará el directorio vacío. Para el laboratorio es
+# suficiente; para producción se usa NFS o un CSI.
+# -------------------------------------------------------------
