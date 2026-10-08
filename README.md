@@ -95,6 +95,30 @@ kubectl get endpoints <servicio>    # si está vacío, el selector no coincide
 
 ---
 
+## Si trabaja desde Windows
+
+Los comandos de este repositorio están escritos en sintaxis de shell de Linux.
+Tres diferencias que encontrará en PowerShell:
+
+| En Linux / macOS | En PowerShell |
+|---|---|
+| `comando1 && comando2` | `comando1 ; comando2` (el `&&` solo existe en PowerShell 7+) |
+| `... \| base64 -d` | `kubectl get secret X -o go-template="{{.data.clave \| base64decode}}"` |
+| `sh -c 'echo "texto" > archivo'` | PowerShell quita las comillas simples y rompe el comando |
+
+Para ese último caso, la solución más limpia es **entrar al contenedor** en
+lugar de pasar el comando desde fuera:
+
+```bash
+kubectl exec -it deploy/<nombre> -- sh
+# ya dentro, escriba normalmente
+```
+
+Así el comando lo interpreta la shell del contenedor y no la de su equipo, y
+funciona igual en cualquier sistema operativo.
+
+---
+
 ## Notas por entorno
 
 Los ejemplos están pensados para funcionar en varios entornos. Donde hay
