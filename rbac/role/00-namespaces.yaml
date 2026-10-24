@@ -1,0 +1,29 @@
+# =============================================================
+# Namespaces — Preparación del entorno de laboratorio
+# -------------------------------------------------------------
+# Módulo 6 · Sesión 6
+#
+# Antes de probar RBAC necesitamos al menos dos namespaces que
+# simulen dos equipos o dos aplicaciones distintas dentro del
+# mismo clúster.
+#
+# El propósito: demostrar que un Role en equipo-a NO da acceso
+# a equipo-b. Eso es la esencia del modelo de seguridad por
+# namespace.
+# =============================================================
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: equipo-a
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: equipo-b
+
+# -------------------------------------------------------------
+# APLICAR PRIMERO, antes que cualquier otro archivo de rbac/
+# -------------------------------------------------------------
+# kubectl apply -f 00-namespaces.yaml
+# kubectl get namespaces | grep equipo
+# -------------------------------------------------------------

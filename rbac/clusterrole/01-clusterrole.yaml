@@ -1,0 +1,133 @@
+# =============================================================
+# ClusterRole + ClusterRoleBinding
+# -------------------------------------------------------------
+# Módulo 6 · Sesión 6
+#
+# Un ClusterRole hace lo mismo que un Role, pero sin límite
+# de namespace. Sirve para dos cosas que un Role no puede hacer:
+#
+# 1. Recursos SIN namespace: Nodes, PersistentVolumes,
+#    Namespaces, StorageClasses. No pertenecen a ningún
+#    namespace, así que un Role no puede darles permisos.
+#
+# 2. Acceso a TODOS los namespaces a la vez: un administrador
+#    o herramienta de monitoreo que necesita ver todo el clúster.
+#
+# Este archivo tiene dos ejemplos separados por ---
+# Ejemplo A: ClusterRole para recursos sin namespace (Nodes, PV)
+# Ejemplo B: ClusterRole para ver Pods en todos los namespaces
+# =============================================================
+
+# ===================== EJEMPLO A ============================
+# ClusterRole que lee Nodes y PersistentVolumes
+# (imposible con un Role porque son recursos de clúster)
+# ============================================================
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: lector-infraestructura
+rules:
+- apiGroups: [""]
+  resources: ["nodes", "persistentvolumes", "namespaces"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["storage.k8s.io"]
+  resources: ["storageclasses"]
+  verbs: ["get", "list", "watch"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: infra-binding
+subjects:
+- kind: User
+  name: operador
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: lector-infraestructura
+  apiGroup: rbac.authorization.k8s.io
+
+---
+# ===================== EJEMPLO B ============================
+# ClusterRole que ve Pods en TODOS los namespaces a la vez
+# ============================================================
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: monitor-global
+rules:
+- apiGroups: [""]
+  resources: ["pods", "services", "configmaps"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "replicasets", "daemonsets", "statefulsets"]
+  verbs: ["get", "list", "watch"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: monitor-global-binding
+subjects:
+- kind: User
+  name: monitor
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: monitor-global
+  apiGroup: rbac.authorization.k8s.io
+
+# -------------------------------------------------------------
+# CÓMO PROBAR EJEMPLO A — lector-infraestructura
+# -------------------------------------------------------------
+# kubectl apply -f 01-clusterrole.yaml
+#
+# ✅ operador puede ver Nodes (recurso sin namespace)
+#   kubectl get nodes --as=operador
+#
+# ✅ operador puede ver PersistentVolumes
+#   kubectl get pv --as=operador
+#
+# ✅ operador puede ver StorageClasses
+#   kubectl get storageclass --as=operador
+#
+# ❌ operador NO puede ver Pods (no está en el ClusterRole)
+#   kubectl get pods --as=operador
+#
+# ---- Con auth can-i ----
+#   kubectl auth can-i list nodes --as=operador
+#   kubectl auth can-i list pods --as=operador
+#
+# -------------------------------------------------------------
+# CÓMO PROBAR EJEMPLO B — monitor-global
+# -------------------------------------------------------------
+# ✅ monitor ve Pods en equipo-a
+#   kubectl get pods -n equipo-a --as=monitor
+#
+# ✅ monitor ve Pods en equipo-b (ningún Role podría hacer esto)
+#   kubectl get pods -n equipo-b --as=monitor
+#
+# ✅ monitor ve Pods en kube-system
+#   kubectl get pods -n kube-system --as=monitor
+#
+# ❌ monitor NO puede borrar nada
+#   kubectl delete pod <nombre> -n equipo-a --as=monitor
+#
+# ---- Ver todos los permisos del monitor ----
+#   kubectl auth can-i --list --as=monitor
+#
+# La salida mostrará los recursos con (*) en la columna
+# NAMESPACE, indicando que el acceso no tiene límite de namespace.
+#
+# -------------------------------------------------------------
+# LA DIFERENCIA CLAVE CON EL ROLE
+# -------------------------------------------------------------
+# Con un Role hubiera necesitado:
+#   - Un Role en equipo-a + un RoleBinding en equipo-a
+#   - Un Role en equipo-b + un RoleBinding en equipo-b
+#   - Un Role en kube-system + un RoleBinding en kube-system
+#
+# Con ClusterRole + ClusterRoleBinding: un objeto de cada tipo
+# y listo para todo el clúster.
+# -------------------------------------------------------------

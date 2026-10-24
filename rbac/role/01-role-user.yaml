@@ -1,0 +1,86 @@
+# =============================================================
+# Role + RoleBinding — Sujeto tipo User
+# -------------------------------------------------------------
+# Módulo 6 · Sesión 6
+#
+# El ejemplo más simple para entender RBAC: un usuario imaginario
+# llamado "juan" que solo puede leer Pods en equipo-a.
+#
+# CLAVE: el User no necesita existir en ningún lado. Kubernetes
+# lo acepta como identidad para evaluar el RBAC. No hay que
+# crear cuentas ni certificados para probar esto en clase.
+#
+# CÓMO FUNCIONA:
+#   Role      → define QUÉ se puede hacer (verbos sobre recursos)
+#   RoleBinding → define A QUIÉN se le da ese permiso
+#   namespace   → el límite donde aplica todo esto
+# =============================================================
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: lector-pods
+  namespace: equipo-a           # solo aplica en este namespace
+rules:
+- apiGroups: [""]               # "" = grupo core (pods, services, secrets...)
+  resources: ["pods"]
+  verbs: ["get", "list", "watch"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: juan-lee-pods
+  namespace: equipo-a           # el binding también vive en este namespace
+subjects:
+- kind: User
+  name: juan                    # nombre inventado — no necesita existir
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: lector-pods
+  apiGroup: rbac.authorization.k8s.io
+
+# -------------------------------------------------------------
+# CÓMO PROBARLO
+# -------------------------------------------------------------
+# kubectl apply -f 01-role-user.yaml
+#
+# Cree algunos Pods para tener algo que listar:
+#   kubectl run nginx --image=nginx:1.25 -n equipo-a
+#
+# ---- PRUEBA 1: kubectl con impersonación (--as) ----
+#
+# ✅ juan puede listar Pods en su namespace
+#   kubectl get pods -n equipo-a --as=juan
+#
+# ❌ juan NO puede ver Pods en el otro namespace
+#   kubectl get pods -n equipo-b --as=juan
+#
+# ❌ juan NO puede ver Secrets (no está en el Role)
+#   kubectl get secrets -n equipo-a --as=juan
+#
+# ❌ juan NO puede borrar (solo tiene get, list, watch)
+#   kubectl delete pod nginx -n equipo-a --as=juan
+#
+# ---- PRUEBA 2: auth can-i (simulación rápida) ----
+#
+#   kubectl auth can-i list pods -n equipo-a --as=juan
+#   kubectl auth can-i list pods -n equipo-b --as=juan
+#   kubectl auth can-i delete pods -n equipo-a --as=juan
+#   kubectl auth can-i get secrets -n equipo-a --as=juan
+#
+# ---- PRUEBA 3: ver todos los permisos de juan ----
+#
+#   kubectl auth can-i --list -n equipo-a --as=juan
+#
+# -------------------------------------------------------------
+# EL MOMENTO PEDAGÓGICO
+# -------------------------------------------------------------
+# Cuando kubectl get pods -n equipo-b --as=juan devuelve:
+#   Error from server (Forbidden): pods is forbidden:
+#   User "juan" cannot list resource "pods" in namespace "equipo-b"
+#
+# Eso muestra que el Role no es una sugerencia: es un muro real
+# en el API Server. El mismo juan, en el mismo clúster, puede
+# leer en un lado y no en el otro.
+# -------------------------------------------------------------

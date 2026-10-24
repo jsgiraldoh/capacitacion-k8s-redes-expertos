@@ -1,0 +1,130 @@
+# =============================================================
+# ClusterRole como plantilla + RoleBinding (no ClusterRoleBinding)
+# -------------------------------------------------------------
+# Módulo 6 · Sesión 6
+#
+# EL TRUCO MÁS ÚTIL DE RBAC: definir el ClusterRole una sola
+# vez y reutilizarlo en distintos namespaces con RoleBindings
+# diferentes. El ClusterRole actúa como plantilla de permisos.
+#
+# LA DIFERENCIA CON 01-clusterrole.yaml:
+#   01: ClusterRole + ClusterRoleBinding → acceso en TODO el clúster
+#   02: ClusterRole + RoleBinding        → acceso CONTENIDO al namespace
+#
+# La contención la decide el tipo de binding, no el ClusterRole.
+#
+# CUÁNDO USARLO:
+# Cuando varios namespaces necesitan el mismo conjunto de verbos
+# sobre los mismos recursos, pero cada equipo solo debe ver el suyo.
+# =============================================================
+
+# El ClusterRole se define UNA SOLA VEZ (puede ya existir del
+# archivo anterior). Este define los permisos de "desarrollador":
+# puede desplegar y escalar, pero no borrar.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: desarrollador
+rules:
+- apiGroups: ["apps"]
+  resources: ["deployments", "replicasets"]
+  verbs: ["get", "list", "watch", "create", "update", "patch"]
+- apiGroups: [""]
+  resources: ["pods", "services", "configmaps"]
+  verbs: ["get", "list", "watch", "create", "update", "patch"]
+- apiGroups: [""]
+  resources: ["pods/log", "pods/exec"]
+  verbs: ["get", "create"]
+
+---
+# RoleBinding en equipo-a: ana tiene el ClusterRole, SOLO en equipo-a
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: ana-desarrollador-a
+  namespace: equipo-a           # el binding contiene el permiso aquí
+subjects:
+- kind: User
+  name: ana
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole             # apunta a ClusterRole, no a Role
+  name: desarrollador
+  apiGroup: rbac.authorization.k8s.io
+
+---
+# RoleBinding en equipo-b: pedro tiene el mismo ClusterRole, SOLO en equipo-b
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: pedro-desarrollador-b
+  namespace: equipo-b           # el binding contiene el permiso aquí
+subjects:
+- kind: User
+  name: pedro
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole             # mismo ClusterRole, distinto namespace
+  name: desarrollador
+  apiGroup: rbac.authorization.k8s.io
+
+# -------------------------------------------------------------
+# CÓMO PROBARLO
+# -------------------------------------------------------------
+# kubectl apply -f 02-clusterrole-como-plantilla.yaml
+#
+# ---- Ana en equipo-a ----
+#
+# ✅ Ana puede crear Deployments en equipo-a
+#   kubectl auth can-i create deployments \
+#     --as=ana -n equipo-a
+#
+# ❌ Ana NO puede hacer nada en equipo-b
+#   kubectl auth can-i list pods --as=ana -n equipo-b
+#
+# ---- Pedro en equipo-b ----
+#
+# ✅ Pedro puede crear Deployments en equipo-b
+#   kubectl auth can-i create deployments \
+#     --as=pedro -n equipo-b
+#
+# ❌ Pedro NO puede hacer nada en equipo-a
+#   kubectl auth can-i list pods --as=pedro -n equipo-a
+#
+# ---- La demostración del patrón ----
+#
+# ✅ Los dos usan el MISMO ClusterRole
+#   kubectl get clusterrole desarrollador
+#
+# ✅ Pero cada uno está contenido en su namespace
+#   kubectl get rolebindings -n equipo-a
+#   kubectl get rolebindings -n equipo-b
+#
+# Si mañana se une un tercer equipo, basta con:
+#   kubectl create rolebinding carlos-desarrollador-c \
+#     --clusterrole=desarrollador \
+#     --user=carlos \
+#     -n equipo-c
+#
+# No hay que crear otro ClusterRole ni otro Role: se reutiliza.
+#
+# -------------------------------------------------------------
+# EL CONTRASTE QUE VALE LA PENA MOSTRAR EN CLASE
+# -------------------------------------------------------------
+# Cambie el RoleBinding de ana por un ClusterRoleBinding:
+#
+#   kubectl create clusterrolebinding ana-global \
+#     --clusterrole=desarrollador \
+#     --user=ana
+#
+# Ahora:
+#   kubectl auth can-i list pods --as=ana -n equipo-b  → YES
+#   kubectl auth can-i list pods --as=ana -n kube-system → YES
+#
+# El mismo ClusterRole, el mismo usuario, pero el binding
+# cambia todo. Ese es el momento en que queda claro por qué
+# el tipo de binding importa tanto como el Role.
+#
+# Limpie el ClusterRoleBinding de prueba:
+#   kubectl delete clusterrolebinding ana-global
+# -------------------------------------------------------------

@@ -1,0 +1,92 @@
+# =============================================================
+# Role + RoleBinding — Sujeto tipo Group
+# -------------------------------------------------------------
+# Módulo 6 · Sesión 6
+#
+# En lugar de dar permisos a un usuario individual, se los damos
+# a un grupo. Cualquier usuario que pertenezca al grupo hereda
+# los permisos automáticamente.
+#
+# CUÁNDO SE USA EN LA REALIDAD:
+# Cuando el equipo de redes tiene 8 personas. En lugar de crear
+# 8 RoleBindings individuales, se crea uno para el grupo y listo.
+# Si alguien se une al equipo, solo hay que agregarlo al grupo.
+# Si alguien sale, se elimina del grupo sin tocar el RoleBinding.
+#
+# EN ESTE EJEMPLO el grupo se llama "equipo-redes". Sus miembros
+# pueden leer Pods, Services y ConfigMaps, pero no Secrets.
+# =============================================================
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: lector-red
+  namespace: equipo-a
+rules:
+- apiGroups: [""]
+  resources: ["pods", "services", "configmaps", "endpoints"]
+  verbs: ["get", "list", "watch"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: equipo-redes-lee
+  namespace: equipo-a
+subjects:
+- kind: Group
+  name: equipo-redes             # cualquier usuario con este grupo hereda el Role
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: lector-red
+  apiGroup: rbac.authorization.k8s.io
+
+# -------------------------------------------------------------
+# CÓMO PROBARLO
+# -------------------------------------------------------------
+# kubectl apply -f 02-role-group.yaml
+#
+# Para simular un usuario que PERTENECE al grupo se usa
+# --as-group además de --as. El usuario puede ser cualquier
+# nombre; lo que importa es el grupo.
+#
+# ✅ Ana pertenece al equipo-redes → puede ver Pods
+#   kubectl get pods -n equipo-a \
+#     --as=ana --as-group=equipo-redes
+#
+# ✅ Pedro también pertenece → mismo resultado
+#   kubectl get pods -n equipo-a \
+#     --as=pedro --as-group=equipo-redes
+#
+# ❌ Marta NO pertenece al grupo → acceso denegado
+#   kubectl get pods -n equipo-a --as=marta
+#
+# ❌ Nadie del grupo puede ver Secrets
+#   kubectl get secrets -n equipo-a \
+#     --as=ana --as-group=equipo-redes
+#
+# ❌ El grupo no tiene acceso al otro namespace
+#   kubectl get pods -n equipo-b \
+#     --as=ana --as-group=equipo-redes
+#
+# ---- Verificar con auth can-i ----
+#
+#   kubectl auth can-i list pods -n equipo-a \
+#     --as=ana --as-group=equipo-redes
+#
+#   kubectl auth can-i list secrets -n equipo-a \
+#     --as=ana --as-group=equipo-redes
+#
+# ---- Ver todos los permisos del grupo ----
+#
+#   kubectl auth can-i --list -n equipo-a \
+#     --as=cualquiera --as-group=equipo-redes
+#
+# -------------------------------------------------------------
+# LA DIFERENCIA CON EL EJEMPLO ANTERIOR
+# -------------------------------------------------------------
+# En 01-role-user.yaml el permiso es personal: solo juan.
+# Aquí el permiso es del grupo: cualquier miembro lo tiene.
+# Cambiar quién está en el grupo no requiere tocar el Role
+# ni el RoleBinding: solo la fuente de identidad (LDAP, OIDC).
+# -------------------------------------------------------------
