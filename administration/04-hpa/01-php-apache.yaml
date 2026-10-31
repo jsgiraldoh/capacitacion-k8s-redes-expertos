@@ -65,5 +65,5 @@ spec:
 #   kubectl top pods -n lab-hpa
 #   ✅ aprox. 1m de CPU (en reposo)
 #   Si dice "metrics not available yet", espere 30 a 60 segundos.
-#   Si falla siempre, revise monitoreo/01-metrics-server/
+#   Si falla siempre, revise monitoring/01-metrics-server/
 # -------------------------------------------------------------

@@ -18,7 +18,7 @@ clúster escale solo.
 ## Estructura
 
 ```
-administracion/
+administration/
 ├── README.md
 ├── 01-mantenimiento-nodos/
 │   ├── README.md
@@ -44,8 +44,8 @@ administracion/
 
 ## Requisitos previos
 
-- Namespace `lab-s8`: `kubectl apply -f ../monitoreo/00-namespace.yaml`
-- Metrics Server funcionando (ver `../monitoreo/01-metrics-server/`): obligatorio para el HPA.
+- Namespace `lab-s8`: `kubectl apply -f ../monitoring/00-namespace.yaml`
+- Metrics Server funcionando (ver `../monitoring/01-metrics-server/`): obligatorio para el HPA.
 
 ## Si trabaja desde Windows (PowerShell)
 

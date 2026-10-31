@@ -20,8 +20,8 @@ tema. Los archivos están numerados en el orden en que se aplican.
 | [`storage/`](storage/) | 5 | 5 | Volúmenes efímeros, PV, PVC y StorageClass |
 | [`secrets/`](secrets/) | 6 | 6 | Datos sensibles, consumidos como variable y como archivo |
 | [`rbac/`](rbac/) | 6 | 6 | Role, RoleBinding, ClusterRole y ClusterRoleBinding, con User, Group y ServiceAccount |
-| [`monitoreo/`](monitoreo/) | 7 | 8 | Metrics Server, probes, eventos y logs, Prometheus y Grafana |
-| [`administracion/`](administracion/) | 8 | 8 | Mantenimiento de nodos, requests y limits, ResourceQuota, LimitRange y HPA |
+| [`monitoring/`](monitoring/) | 7 | 8 | Metrics Server, probes, eventos y logs, Prometheus y Grafana |
+| [`administration/`](administration/) | 8 | 8 | Mantenimiento de nodos, requests y limits, ResourceQuota, LimitRange y HPA |
 
 ---
 
@@ -45,9 +45,9 @@ secrets/          Los datos sensibles no van en la imagen ni en el YAML.
   ↓
 rbac/             No todos deben poder hacer todo: quién puede hacer qué.
   ↓
-monitoreo/        Ver qué pasa: métricas, probes, eventos y logs.
+monitoring/       Ver qué pasa: métricas, probes, eventos y logs.
   ↓
-administracion/   Operar: mantener nodos, poner límites y escalar solo.
+administration/   Operar: mantener nodos, poner límites y escalar solo.
 ```
 
 ---
@@ -68,7 +68,7 @@ Fijar el namespace en el contexto evita tener que escribir `-n` en cada
 comando. Es el mismo mecanismo del archivo `~/.kube/config` que vimos en la
 Sesión 1.
 
-Las carpetas `rbac/`, `monitoreo/` y `administracion/` crean sus propios
+Las carpetas `rbac/`, `monitoring/` y `administration/` crean sus propios
 namespaces de laboratorio (`equipo-a`, `equipo-b`, `lab-s8`, `lab-quota`,
 `lab-hpa`) y declaran el namespace de forma explícita en cada manifiesto.
 
@@ -146,7 +146,7 @@ kubectl exec -it deploy/<nombre> -- sh
 Así el comando lo interpreta la shell del contenedor y no la de su equipo, y
 funciona igual en cualquier sistema operativo.
 
-Los README de `monitoreo/` y `administracion/` ya están escritos en una sola
+Los README de `monitoring/` y `administration/` ya están escritos en una sola
 línea por comando. Algunos comentarios de `rbac/` usan `\` para continuar
 líneas: en PowerShell júntelas en una.
 
@@ -167,7 +167,7 @@ diferencias, están marcadas dentro de cada archivo.
 
 Metrics Server en clústeres locales y kubeadm casi siempre necesita además el
 flag `--kubelet-insecure-tls`. Está explicado paso a paso en
-[`monitoreo/01-metrics-server/`](monitoreo/01-metrics-server/).
+[`monitoring/01-metrics-server/`](monitoring/01-metrics-server/).
 
 ---
 
@@ -211,7 +211,7 @@ reflejan en el clúster de forma automática. Eso lo convierte, además de en
 material de estudio, en una demostración viva de GitOps.
 
 > **Aviso sobre los laboratorios.** Varios manifiestos de `rbac/`,
-> `monitoreo/` y `administracion/` son ejercicios que fallan **a propósito**
+> `monitoring/` y `administration/` son ejercicios que fallan **a propósito**
 > (probes rotas, un Pod que pide 500 Gi, un Pod que termina en `OOMKilled`,
 > un Deployment que supera su cuota) y algunos modifican el comportamiento
 > del namespace (ResourceQuota, LimitRange). Si la aplicación de Argo CD

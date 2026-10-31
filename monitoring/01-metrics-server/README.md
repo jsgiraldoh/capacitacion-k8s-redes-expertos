@@ -4,7 +4,7 @@
 
 `kubectl top` no mide nada por sí mismo: le pregunta a la API
 `metrics.k8s.io`, que publica el Metrics Server. Sin ese componente,
-`kubectl top` falla, y el HPA de `administracion/04-hpa/` también.
+`kubectl top` falla, y el HPA de `administration/04-hpa/` también.
 
 ## Archivos
 

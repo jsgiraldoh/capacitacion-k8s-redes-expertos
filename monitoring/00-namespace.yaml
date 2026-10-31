@@ -5,7 +5,7 @@
 #
 # Namespace de trabajo para los ejercicios de probes y de
 # mantenimiento de nodos. Los manifiestos de las carpetas
-# monitoreo/02-probes y administracion/01-mantenimiento-nodos
+# monitoring/02-probes y administration/01-mantenimiento-nodos
 # declaran este namespace de forma explícita.
 # =============================================================
 apiVersion: v1

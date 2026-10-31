@@ -17,7 +17,7 @@ herramientas, de la más simple a la más completa.
 ## Estructura
 
 ```
-monitoreo/
+monitoring/
 ├── README.md
 ├── 00-namespace.yaml
 ├── 01-metrics-server/

@@ -54,7 +54,7 @@ En el navegador: `http://localhost:3000`
 Menú **Dashboards**, luego **Kubernetes / Compute Resources / Namespace (Pods)**.
 Elija un namespace y amplíe el rango de tiempo a la última hora.
 
-Si la prueba del HPA (`administracion/04-hpa/`) fue reciente, elija `lab-hpa`:
+Si la prueba del HPA (`administration/04-hpa/`) fue reciente, elija `lab-hpa`:
 se ve la curva de CPU subir y las réplicas aumentar.
 
 ## Las tres herramientas
