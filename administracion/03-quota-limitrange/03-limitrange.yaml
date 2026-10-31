@@ -1,0 +1,39 @@
+# =============================================================
+# LimitRange: valores por defecto para cada contenedor
+# -------------------------------------------------------------
+# Módulo 8 · Sesión 8
+#
+# Si un contenedor no declara requests ni limits, el LimitRange
+# se los pone automáticamente. Así los Pods sin resources dejan
+# de ser rechazados por la ResourceQuota.
+#
+#   defaultRequest → el request que se asigna si no hay ninguno
+#   default        → el límite que se asigna si no hay ninguno
+#
+# DIFERENCIA CON LA RESOURCEQUOTA:
+#   ResourceQuota → techo TOTAL del namespace
+#   LimitRange    → valores POR CONTENEDOR
+# =============================================================
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: defaults-lab
+  namespace: lab-quota
+spec:
+  limits:
+  - type: Container
+    defaultRequest:
+      cpu: "100m"
+      memory: "64Mi"
+    default:
+      cpu: "500m"
+      memory: "256Mi"
+
+# -------------------------------------------------------------
+# CÓMO PROBARLO
+# -------------------------------------------------------------
+# kubectl apply -f 03-limitrange.yaml
+# kubectl describe limitrange defaults-lab -n lab-quota
+# kubectl apply -f 02-pod-sin-recursos.yaml
+#   ✅ ahora el Pod sin resources sí se crea
+# -------------------------------------------------------------

@@ -1,0 +1,61 @@
+# =============================================================
+# Readiness Probe corregida
+# -------------------------------------------------------------
+# Módulo 7 · Sesión 8
+#
+# Mismo Deployment y Service del archivo anterior, con el path
+# de la readiness de vuelta en "/".
+#
+# Este es el mismo mecanismo que protege un rolling update:
+# Kubernetes no envía tráfico a un Pod nuevo hasta que su
+# readiness probe pasa.
+# =============================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-ready
+  namespace: lab-s8
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: web-ready
+  template:
+    metadata:
+      labels:
+        app: web-ready
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.25
+        ports:
+        - containerPort: 80
+        readinessProbe:
+          httpGet:
+            path: /                    # ← corregido
+            port: 80
+          periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-ready
+  namespace: lab-s8
+spec:
+  selector:
+    app: web-ready
+  ports:
+  - port: 80
+    targetPort: 80
+
+# -------------------------------------------------------------
+# CÓMO PROBARLO
+# -------------------------------------------------------------
+# kubectl apply -f 04-web-ready-ok.yaml
+#
+#   kubectl get pods -l app=web-ready
+#   ✅ READY 1/1 en los dos Pods
+#
+#   kubectl get endpoints web-ready
+#   ✅ ENDPOINTS   10.1.0.31:80,10.1.0.32:80
+# -------------------------------------------------------------

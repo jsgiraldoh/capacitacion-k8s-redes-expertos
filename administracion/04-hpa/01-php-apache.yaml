@@ -1,0 +1,69 @@
+# =============================================================
+# Aplicación que consume CPU al recibir peticiones
+# -------------------------------------------------------------
+# Módulo 8 · Sesión 8
+#
+# Usa la imagen de ejemplo del proyecto Kubernetes diseñada para
+# gastar CPU en cada petición. nginx casi no consume CPU, por eso
+# no sirve para demostrar el HPA.
+#
+# DOS DETALLES QUE HACEN FUNCIONAR EL HPA:
+#
+# 1. resources.requests.cpu es OBLIGATORIO. El HPA calcula el
+#    porcentaje sobre el request, no sobre el límite ni sobre el
+#    nodo. Sin request, el HPA muestra <unknown> y no escala.
+#
+# 2. NO hay campo "replicas" en el Deployment. Cuando un HPA
+#    gobierna el Deployment, el número de réplicas lo decide el
+#    HPA. Si estuviera fijo y se gestiona con Argo CD, Argo CD
+#    revertiría lo que haga el HPA.
+# =============================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: php-apache
+  namespace: lab-hpa
+spec:
+  selector:
+    matchLabels:
+      app: php-apache
+  template:
+    metadata:
+      labels:
+        app: php-apache
+    spec:
+      containers:
+      - name: php-apache
+        image: registry.k8s.io/hpa-example
+        ports:
+        - containerPort: 80
+        resources:
+          requests:
+            cpu: 200m              # base del cálculo del porcentaje del HPA
+          limits:
+            cpu: 500m
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: php-apache
+  namespace: lab-hpa
+spec:
+  selector:
+    app: php-apache
+  ports:
+  - port: 80
+
+# -------------------------------------------------------------
+# CÓMO PROBARLO
+# -------------------------------------------------------------
+# kubectl apply -f 01-php-apache.yaml
+# kubectl get pods -n lab-hpa
+#   ✅ php-apache-xxxx   1/1   Running
+#
+# Confirmar que llegan las métricas del Pod:
+#   kubectl top pods -n lab-hpa
+#   ✅ aprox. 1m de CPU (en reposo)
+#   Si dice "metrics not available yet", espere 30 a 60 segundos.
+#   Si falla siempre, revise monitoreo/01-metrics-server/
+# -------------------------------------------------------------

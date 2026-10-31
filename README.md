@@ -17,8 +17,11 @@ tema. Los archivos están numerados en el orden en que se aplican.
 | [`replicasets/`](replicasets/) | 3 | 2 | El primer controlador: autoreparación y selectores |
 | [`deployments/`](deployments/) | 3 y 4 | 2 y 3 | Cliente `netshoot` para diagnóstico de red |
 | [`services/`](services/) | 4 | 3 | ClusterIP, NodePort y LoadBalancer |
-| [`secrets/`](secrets/) | 6 | 4 | Datos sensibles, consumidos como variable y como archivo |
 | [`storage/`](storage/) | 5 | 5 | Volúmenes efímeros, PV, PVC y StorageClass |
+| [`secrets/`](secrets/) | 6 | 6 | Datos sensibles, consumidos como variable y como archivo |
+| [`rbac/`](rbac/) | 6 | 6 | Role, RoleBinding, ClusterRole y ClusterRoleBinding, con User, Group y ServiceAccount |
+| [`monitoreo/`](monitoreo/) | 7 | 8 | Metrics Server, probes, eventos y logs, Prometheus y Grafana |
+| [`administracion/`](administracion/) | 8 | 8 | Mantenimiento de nodos, requests y limits, ResourceQuota, LimitRange y HPA |
 
 ---
 
@@ -28,17 +31,23 @@ El orden del curso cuenta una historia. Cada paso resuelve el problema que
 dejó abierto el anterior.
 
 ```
-pods/            Un Pod suelto. Si lo borra, nadie lo recrea.
+pods/             Un Pod suelto. Si lo borra, nadie lo recrea.
   ↓
-replicasets/     Alguien vigila que haya N Pods vivos.
+replicasets/      Alguien vigila que haya N Pods vivos.
   ↓
-deployments/     Además, actualizaciones progresivas y rollbacks.
+deployments/      Además, actualizaciones progresivas y rollbacks.
   ↓
-services/        Los Pods cambian de IP; el Service da una dirección estable.
+services/         Los Pods cambian de IP; el Service da una dirección estable.
   ↓
-storage/         Los Pods son efímeros; el volumen sobrevive.
+storage/          Los Pods son efímeros; el volumen sobrevive.
   ↓
-secrets/         Los datos sensibles no van en la imagen ni en el YAML.
+secrets/          Los datos sensibles no van en la imagen ni en el YAML.
+  ↓
+rbac/             No todos deben poder hacer todo: quién puede hacer qué.
+  ↓
+monitoreo/        Ver qué pasa: métricas, probes, eventos y logs.
+  ↓
+administracion/   Operar: mantener nodos, poner límites y escalar solo.
 ```
 
 ---
@@ -59,6 +68,10 @@ Fijar el namespace en el contexto evita tener que escribir `-n` en cada
 comando. Es el mismo mecanismo del archivo `~/.kube/config` que vimos en la
 Sesión 1.
 
+Las carpetas `rbac/`, `monitoreo/` y `administracion/` crean sus propios
+namespaces de laboratorio (`equipo-a`, `equipo-b`, `lab-s8`, `lab-quota`,
+`lab-hpa`) y declaran el namespace de forma explícita en cada manifiesto.
+
 ---
 
 ## Herramienta de diagnóstico
@@ -77,7 +90,7 @@ kubectl exec deploy/client-deployment -- nslookup nginx-service
 
 ---
 
-## Los tres comandos de diagnóstico
+## Los comandos de diagnóstico
 
 Casi cualquier problema se diagnostica con estos tres, en este orden:
 
@@ -93,21 +106,37 @@ Y uno más, específico de Services, que resuelve el fallo más frecuente:
 kubectl get endpoints <servicio>    # si está vacío, el selector no coincide
 ```
 
+Desde la Sesión 8, dos más:
+
+```bash
+kubectl get events --sort-by=.lastTimestamp   # la historia reciente del namespace
+kubectl top pods -A                           # consumo real (requiere Metrics Server)
+```
+
+Y desde la Sesión 6, para los problemas de permisos (`Forbidden`):
+
+```bash
+kubectl auth can-i <verbo> <recurso> -n <namespace> --as=<identidad>
+kubectl auth can-i --list -n <namespace> --as=<identidad>
+```
+
 ---
 
 ## Si trabaja desde Windows
 
 Los comandos de este repositorio están escritos en sintaxis de shell de Linux.
-Tres diferencias que encontrará en PowerShell:
+Estas son las diferencias que encontrará en PowerShell:
 
 | En Linux / macOS | En PowerShell |
 |---|---|
 | `comando1 && comando2` | `comando1 ; comando2` (el `&&` solo existe en PowerShell 7+) |
 | `... \| base64 -d` | `kubectl get secret X -o go-template="{{.data.clave \| base64decode}}"` |
 | `sh -c 'echo "texto" > archivo'` | PowerShell quita las comillas simples y rompe el comando |
+| Línea que termina en `\` y continúa abajo | PowerShell no lo entiende: escriba el comando completo en **una sola línea** (o termine la línea con un acento grave ``` ` ```) |
+| `kubectl get ... \| grep texto` | `kubectl get ... \| Select-String texto` |
 
-Para ese último caso, la solución más limpia es **entrar al contenedor** en
-lugar de pasar el comando desde fuera:
+Para el caso de las comillas, la solución más limpia es **entrar al contenedor**
+en lugar de pasar el comando desde fuera:
 
 ```bash
 kubectl exec -it deploy/<nombre> -- sh
@@ -116,6 +145,10 @@ kubectl exec -it deploy/<nombre> -- sh
 
 Así el comando lo interpreta la shell del contenedor y no la de su equipo, y
 funciona igual en cualquier sistema operativo.
+
+Los README de `monitoreo/` y `administracion/` ya están escritos en una sola
+línea por comando. Algunos comentarios de `rbac/` usan `\` para continuar
+líneas: en PowerShell júntelas en una.
 
 ---
 
@@ -129,6 +162,12 @@ diferencias, están marcadas dentro de cada archivo.
 | **LoadBalancer** | Solo Docker Desktop | Queda en `<pending>` | Funciona, se factura |
 | **PVC dinámico** | Según el entorno | Hay que configurar el CSI | `do-block-storage` listo |
 | **ReadWriteMany** | No | Requiere NFS | NFS Share de DigitalOcean |
+| **Metrics Server** (`kubectl top`, HPA) | Docker Desktop y kind: instalarlo | Instalarlo | Normalmente incluido; verificar |
+| **`kubectl drain`** | Con un solo nodo: solo `cordon` | Requiere 2 o más nodos | Requiere 2 o más nodos en el pool |
+
+Metrics Server en clústeres locales y kubeadm casi siempre necesita además el
+flag `--kubelet-insecure-tls`. Está explicado paso a paso en
+[`monitoreo/01-metrics-server/`](monitoreo/01-metrics-server/).
 
 ---
 
@@ -157,9 +196,6 @@ que eliminarlo a mano desde el panel de DigitalOcean.
 Temas del programa que aún no tienen ejemplos en este repositorio:
 
 - Ingress, DNS interno y Network Policies (resto del Módulo 4)
-- RBAC: Roles, RoleBindings y ServiceAccounts (Módulo 6)
-- Monitoreo y observabilidad (Módulo 7)
-- Administración operativa (Módulo 8)
 - Troubleshooting (Módulo 9)
 - Laboratorio final integrador
 
@@ -173,3 +209,12 @@ Material didáctico elaborado por **Johan Sebastián Giraldo Hurtado**
 Está conectado a **Argo CD**, de modo que los cambios en la rama `master` se
 reflejan en el clúster de forma automática. Eso lo convierte, además de en
 material de estudio, en una demostración viva de GitOps.
+
+> **Aviso sobre los laboratorios.** Varios manifiestos de `rbac/`,
+> `monitoreo/` y `administracion/` son ejercicios que fallan **a propósito**
+> (probes rotas, un Pod que pide 500 Gi, un Pod que termina en `OOMKilled`,
+> un Deployment que supera su cuota) y algunos modifican el comportamiento
+> del namespace (ResourceQuota, LimitRange). Si la aplicación de Argo CD
+> sincroniza la raíz del repositorio de forma recursiva, esos archivos se
+> aplicarían solos. Apunte Argo CD solo a las carpetas que quiera
+> sincronizar, o aplique los laboratorios manualmente con `kubectl apply`.

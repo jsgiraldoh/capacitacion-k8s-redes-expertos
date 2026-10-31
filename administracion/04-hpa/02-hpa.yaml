@@ -1,0 +1,76 @@
+# =============================================================
+# HorizontalPodAutoscaler
+# -------------------------------------------------------------
+# Módulo 8 · Sesión 8
+#
+# Mantiene el uso promedio de CPU en el 50% del request.
+# Con request de 200m, el objetivo es 100m por Pod.
+#
+# LA FÓRMULA:
+#   réplicas deseadas = redondeo hacia arriba de
+#                       (réplicas actuales x uso actual / objetivo)
+#   Ejemplo: 1 réplica al 250% con objetivo 50%
+#            1 x 250 / 50 = 5 réplicas
+#
+# SUBIR RÁPIDO, BAJAR DESPACIO:
+# Por defecto el HPA espera 5 minutos antes de reducir réplicas.
+# Aquí se baja a 60 segundos para que la clase no se haga eterna.
+# =============================================================
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: php-apache
+  namespace: lab-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: php-apache
+  minReplicas: 1
+  maxReplicas: 5                   # tope razonable para clústeres locales
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 50
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 60
+
+# -------------------------------------------------------------
+# CÓMO PROBARLO
+# -------------------------------------------------------------
+# kubectl apply -f 02-hpa.yaml
+# kubectl get hpa -n lab-hpa
+#   Los primeros segundos:  TARGETS <unknown>/50%
+#   Tras 30 a 60 segundos:  TARGETS 0%/50%   REPLICAS 1
+#
+# PASO A PASO DE LA PRUEBA CON CARGA (dos terminales):
+#
+# » TERMINAL 1: observar (déjela abierta)
+#   kubectl get hpa php-apache -n lab-hpa --watch
+#
+# » TERMINAL 2: generar carga
+#   kubectl apply -f 03-load-generator.yaml
+#
+# » TERMINAL 1: lo que debe verse
+#   0:00        0%/50%             1 réplica
+#   0:30 a 1:00 200% a 250%/50%    1 réplica
+#   1:00 a 1:30 250%/50%           4 o 5 réplicas
+#   2:00 a 3:00 50% a 70%/50%      5 réplicas
+#
+# Leer la historia del HPA:
+#   kubectl describe hpa php-apache -n lab-hpa
+#   ✅ Events: SuccessfulRescale  New size: 4; reason: cpu resource
+#      utilization (percentage of request) above target
+#
+# QUITAR LA CARGA:
+#   kubectl delete pod load-generator -n lab-hpa
+#   ✅ TARGETS baja a 0%; tras la ventana de 60 s las réplicas
+#      vuelven a 1
+#
+# ATAJO IMPERATIVO (sin YAML, sin behavior, no queda en Git):
+#   kubectl autoscale deployment php-apache --cpu-percent=50 --min=1 --max=5 -n lab-hpa
+# -------------------------------------------------------------

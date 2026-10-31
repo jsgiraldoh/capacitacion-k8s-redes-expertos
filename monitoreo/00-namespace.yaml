@@ -1,0 +1,23 @@
+# =============================================================
+# Namespace lab-s8
+# -------------------------------------------------------------
+# Módulo 7 y 8 · Sesión 8
+#
+# Namespace de trabajo para los ejercicios de probes y de
+# mantenimiento de nodos. Los manifiestos de las carpetas
+# monitoreo/02-probes y administracion/01-mantenimiento-nodos
+# declaran este namespace de forma explícita.
+# =============================================================
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: lab-s8
+
+# -------------------------------------------------------------
+# APLICAR PRIMERO
+# -------------------------------------------------------------
+# kubectl apply -f 00-namespace.yaml
+# kubectl config set-context --current --namespace=lab-s8
+# kubectl config view --minify
+#   (buscar la línea "namespace: lab-s8")
+# -------------------------------------------------------------

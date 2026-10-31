@@ -1,0 +1,60 @@
+# =============================================================
+# Deployment con Liveness y Readiness (versión sana)
+# -------------------------------------------------------------
+# Módulo 7 · Sesión 8
+#
+# Punto de partida: nginx con las dos probes apuntando a "/",
+# una ruta que nginx sí responde con 200.
+#
+# DOS PREGUNTAS DISTINTAS:
+#   Liveness  → ¿el proceso está vivo?  Si falla: REINICIA el contenedor.
+#   Readiness → ¿puede recibir tráfico? Si falla: saca el Pod del Service.
+#
+# POR QUÉ "/" Y NO "/healthz":
+# nginx no tiene la ruta /healthz. Respondería 404 y la probe
+# fallaría desde el primer segundo. HTTP 400 o superior cuenta
+# como fallo.
+# =============================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-probe
+  namespace: lab-s8
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: web-probe
+  template:
+    metadata:
+      labels:
+        app: web-probe
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.25
+        ports:
+        - containerPort: 80
+        livenessProbe:
+          httpGet:
+            path: /                    # ruta válida: responde 200
+            port: 80
+          initialDelaySeconds: 5       # espera 5 s antes de la primera comprobación
+          periodSeconds: 5             # comprueba cada 5 s
+          failureThreshold: 2          # 2 fallos seguidos = reinicio
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          periodSeconds: 5
+
+# -------------------------------------------------------------
+# CÓMO PROBARLO
+# -------------------------------------------------------------
+# kubectl apply -f 01-web-probe.yaml
+# kubectl get pods
+#   ✅ web-probe-xxxx   1/1   Running   0 reinicios
+#
+# Ver las probes configuradas (buscar "Liveness:" y "Readiness:"):
+#   kubectl describe pod -l app=web-probe
+# -------------------------------------------------------------

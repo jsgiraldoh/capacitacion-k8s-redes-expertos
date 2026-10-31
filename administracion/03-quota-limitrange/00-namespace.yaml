@@ -1,0 +1,14 @@
+# =============================================================
+# Namespace lab-quota
+# -------------------------------------------------------------
+# Módulo 8 · Sesión 8
+#
+# Namespace propio para que la cuota no se mezcle con los Pods
+# de los ejercicios anteriores.
+# =============================================================
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: lab-quota
+
+# kubectl apply -f 00-namespace.yaml

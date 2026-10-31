@@ -1,0 +1,66 @@
+# =============================================================
+# Aplicación de prueba para el mantenimiento de nodos
+# -------------------------------------------------------------
+# Módulo 8 · Sesión 8
+#
+# Tres réplicas de nginx. Sirven para ver cómo reaccionan los
+# Pods cuando un nodo se marca con cordon, se evacúa con drain
+# y se devuelve con uncordon.
+# =============================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-mant
+  namespace: lab-s8
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: app-mant
+  template:
+    metadata:
+      labels:
+        app: app-mant
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.25
+
+# -------------------------------------------------------------
+# ANTES DE EMPEZAR: ¿cuántos nodos tiene su clúster?
+#   kubectl get nodes
+# 2 o más nodos → haga todos los pasos.
+# UN solo nodo (Docker Desktop) → NO haga el paso del drain.
+# -------------------------------------------------------------
+# CÓMO PROBARLO
+# -------------------------------------------------------------
+# kubectl apply -f 01-deployment-app-mant.yaml
+# kubectl get pods -o wide -n lab-s8
+#   (la columna NODE indica dónde corre cada Pod)
+#
+# ---- 1. cordon: el nodo ya no acepta Pods nuevos ----
+#   kubectl cordon NOMBRE-DEL-NODO
+#   kubectl get nodes
+#   ✅ STATUS: Ready,SchedulingDisabled
+#
+# ---- 2. Comprobar el efecto ----
+#   kubectl scale deployment app-mant --replicas=5 -n lab-s8
+#   kubectl get pods -o wide -n lab-s8
+#   Con varios nodos: los 2 Pods nuevos nacen en OTRO nodo.
+#   Con un solo nodo: los 2 Pods nuevos quedan en Pending.
+#   kubectl describe pod -l app=app-mant -n lab-s8
+#   ❌ 0/1 nodes are available: 1 node(s) were unschedulable.
+#
+# ---- 3. drain (solo con 2 o más nodos) ----
+#   kubectl drain NOMBRE-DEL-NODO --ignore-daemonsets --delete-emptydir-data
+#   kubectl get pods -o wide -n lab-s8
+#   ✅ todos los Pods de app-mant corren en los otros nodos
+#
+# ---- 4. uncordon: devolver el nodo ----
+#   kubectl uncordon NOMBRE-DEL-NODO
+#   kubectl get nodes
+#   ✅ el nodo vuelve a Ready, sin SchedulingDisabled
+#
+# Los Pods que se movieron NO regresan solos al nodo original:
+# Kubernetes no rebalancea Pods ya programados.
+# -------------------------------------------------------------

@@ -1,0 +1,42 @@
+# =============================================================
+# Pod que pide más recursos de los que existen
+# -------------------------------------------------------------
+# Módulo 8 · Sesión 8
+#
+# REQUESTS = lo que el Pod RESERVA. El Scheduler los usa para
+# decidir en qué nodo cabe. Aquí se piden 100 núcleos y 500 Gi:
+# ningún nodo de laboratorio los tiene.
+#
+# QUÉ DEMUESTRA:
+# El Pod no consume nada: simplemente no cabe en ningún nodo.
+# El Scheduler decide con los requests, no con el consumo real.
+# =============================================================
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-grande
+  namespace: lab-s8
+spec:
+  containers:
+  - name: nginx
+    image: nginx:1.25
+    resources:
+      requests:
+        cpu: "100"
+        memory: "500Gi"
+
+# -------------------------------------------------------------
+# CÓMO PROBARLO
+# -------------------------------------------------------------
+# kubectl apply -f 01-pod-grande.yaml
+# kubectl get pod pod-grande -n lab-s8
+#   ❌ STATUS Pending
+#
+# kubectl describe pod pod-grande -n lab-s8
+#   En Events:
+#   ❌ FailedScheduling: 0/1 nodes are available:
+#      1 Insufficient cpu, 1 Insufficient memory.
+#
+# Limpiar:
+#   kubectl delete pod pod-grande -n lab-s8
+# -------------------------------------------------------------

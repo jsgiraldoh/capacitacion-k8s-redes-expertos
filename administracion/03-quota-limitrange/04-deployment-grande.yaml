@@ -1,0 +1,48 @@
+# =============================================================
+# Deployment que intenta superar la cuota
+# -------------------------------------------------------------
+# Módulo 8 · Sesión 8
+#
+# Pide 8 réplicas, pero la cuota solo permite 5 Pods en total
+# (y además limita CPU y memoria). Solo se crean algunos.
+#
+# DETALLE IMPORTANTE:
+# El Deployment NO falla. El ReplicaSet sigue intentando crear
+# los Pods que faltan. El error vive en los EVENTOS, no en el
+# comando que usted ejecutó. Si se libera o aumenta la cuota,
+# el ReplicaSet crea los Pods pendientes.
+# =============================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grande
+  namespace: lab-quota
+spec:
+  replicas: 8
+  selector:
+    matchLabels:
+      app: grande
+  template:
+    metadata:
+      labels:
+        app: grande
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.25
+        # Sin "resources": el LimitRange pone los valores por defecto
+
+# -------------------------------------------------------------
+# CÓMO PROBARLO
+# -------------------------------------------------------------
+# kubectl apply -f 04-deployment-grande.yaml
+# kubectl get pods -n lab-quota
+#   ❌ NO aparecen los 8 Pods, solo los que caben en la cuota
+#
+# kubectl get events -n lab-quota --sort-by=.lastTimestamp
+#   ❌ Warning FailedCreate replicaset/grande-...
+#      exceeded quota: cuota-lab, requested: ..., used: ..., limited: ...
+#
+# kubectl describe quota cuota-lab -n lab-quota
+#   (Used se acerca o llega a Hard)
+# -------------------------------------------------------------

@@ -1,0 +1,42 @@
+# =============================================================
+# Pod SIN requests ni limits
+# -------------------------------------------------------------
+# Módulo 8 · Sesión 8
+#
+# Un Pod normal, sin la sección resources. En un namespace con
+# ResourceQuota de CPU y memoria, el API Server lo RECHAZA.
+#
+# Este mismo archivo se aplica dos veces:
+#   1. Con solo la cuota          → ❌ rechazado
+#   2. Con cuota + LimitRange     → ✅ aceptado
+# =============================================================
+apiVersion: v1
+kind: Pod
+metadata:
+  name: prueba
+  namespace: lab-quota
+spec:
+  containers:
+  - name: nginx
+    image: nginx:1.25
+
+# -------------------------------------------------------------
+# CÓMO PROBARLO
+# -------------------------------------------------------------
+# ---- 1. Solo con la ResourceQuota aplicada ----
+#   kubectl apply -f 02-pod-sin-recursos.yaml
+#   ❌ Error from server (Forbidden): pods "prueba" is forbidden:
+#      failed quota: cuota-lab: must specify limits.cpu for: prueba;
+#      limits.memory for: prueba; requests.cpu for: prueba;
+#      requests.memory for: prueba
+#
+# ---- 2. Aplicar el LimitRange y repetir ----
+#   kubectl apply -f 03-limitrange.yaml
+#   kubectl apply -f 02-pod-sin-recursos.yaml
+#   ✅ pod/prueba created
+#
+#   kubectl describe pod prueba -n lab-quota
+#   (la sección Limits y Requests muestra los valores del LimitRange)
+#   kubectl describe quota cuota-lab -n lab-quota
+#   (la columna Used ya refleja el Pod)
+# -------------------------------------------------------------

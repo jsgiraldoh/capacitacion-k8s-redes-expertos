@@ -1,0 +1,38 @@
+# =============================================================
+# Generador de carga
+# -------------------------------------------------------------
+# Módulo 8 · Sesión 8
+#
+# Un Pod que hace peticiones sin parar al Service php-apache.
+# Cada petición obliga al servidor a calcular, y por eso sube
+# la CPU y el HPA reacciona.
+#
+# restartPolicy Never: cuando se borra el Pod, la carga termina.
+# =============================================================
+apiVersion: v1
+kind: Pod
+metadata:
+  name: load-generator
+  namespace: lab-hpa
+spec:
+  restartPolicy: Never
+  containers:
+  - name: busybox
+    image: busybox:1.36
+    command: ["/bin/sh", "-c"]
+    args: ["while sleep 0.01; do wget -q -O- http://php-apache; done"]
+
+# -------------------------------------------------------------
+# CÓMO USARLO
+# -------------------------------------------------------------
+# Iniciar la carga:
+#   kubectl apply -f 03-load-generator.yaml
+#   kubectl get pod load-generator -n lab-hpa
+#
+# Detener la carga:
+#   kubectl delete pod load-generator -n lab-hpa
+#
+# Si el hardware aguanta y el HPA no sube lo esperado, agregue
+# un segundo generador con otro nombre:
+#   kubectl run load-generator-2 -n lab-hpa --restart=Never --image=busybox:1.36 -- /bin/sh -c "while sleep 0.01; do wget -q -O- http://php-apache; done"
+# -------------------------------------------------------------

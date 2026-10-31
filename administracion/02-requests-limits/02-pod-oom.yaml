@@ -1,0 +1,45 @@
+# =============================================================
+# Pod que supera su límite de memoria (OOMKilled)
+# -------------------------------------------------------------
+# Módulo 8 · Sesión 8
+#
+# El contenedor intenta reservar 250 MB de memoria, pero su
+# LÍMITE es 100 Mi. Al pasarse, el kernel lo mata.
+#
+# DIFERENCIA CLAVE ENTRE CPU Y MEMORIA:
+#   Pasarse del límite de CPU    → el contenedor se FRENA (throttling)
+#   Pasarse del límite de memoria → el contenedor se MATA (OOMKilled)
+# La memoria no se puede "frenar".
+# =============================================================
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-oom
+  namespace: lab-s8
+spec:
+  containers:
+  - name: stress
+    image: polinux/stress
+    command: ["stress"]
+    args: ["--vm", "1", "--vm-bytes", "250M", "--vm-hang", "1"]
+    resources:
+      requests:
+        memory: "50Mi"
+      limits:
+        memory: "100Mi"           # techo: 100 Mi, el proceso pide 250 MB
+
+# -------------------------------------------------------------
+# CÓMO PROBARLO
+# -------------------------------------------------------------
+# kubectl apply -f 02-pod-oom.yaml
+# kubectl get pod pod-oom -n lab-s8 -w
+#   ❌ STATUS OOMKilled
+#   ❌ luego CrashLoopBackOff, con RESTARTS en aumento
+#
+# kubectl describe pod pod-oom -n lab-s8
+#   En "Last State" buscar:
+#   ❌ Reason: OOMKilled     Exit Code: 137
+#
+# Limpiar:
+#   kubectl delete pod pod-oom -n lab-s8
+# -------------------------------------------------------------

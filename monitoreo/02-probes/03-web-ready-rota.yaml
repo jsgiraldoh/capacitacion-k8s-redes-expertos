@@ -1,0 +1,71 @@
+# =============================================================
+# Readiness Probe rota: Pod vivo pero sin tráfico
+# -------------------------------------------------------------
+# Módulo 7 · Sesión 8
+#
+# Dos réplicas de nginx con una READINESS probe que apunta a una
+# ruta inexistente, y un Service delante.
+#
+# QUÉ DEMUESTRA:
+#   Los Pods NO se reinician (RESTARTS 0). Siguen vivos. Pero el
+#   Service los saca de su lista de destinos porque no están
+#   listos. Un usuario recibiría errores aunque "kubectl get pods"
+#   diga Running.
+# =============================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-ready
+  namespace: lab-s8
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: web-ready
+  template:
+    metadata:
+      labels:
+        app: web-ready
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.25
+        ports:
+        - containerPort: 80
+        readinessProbe:
+          httpGet:
+            path: /noexiste            # ← ruta que devuelve 404: nunca está "listo"
+            port: 80
+          periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-ready
+  namespace: lab-s8
+spec:
+  selector:
+    app: web-ready
+  ports:
+  - port: 80
+    targetPort: 80
+
+# -------------------------------------------------------------
+# CÓMO PROBARLO
+# -------------------------------------------------------------
+# kubectl apply -f 03-web-ready-rota.yaml
+#
+# ---- 1. Pods vivos pero no listos ----
+#   kubectl get pods -l app=web-ready
+#   ❌ STATUS Running pero READY 0/1, RESTARTS 0
+#
+# ---- 2. ¿A quién le envía tráfico el Service? ----
+#   kubectl get endpoints web-ready
+#   ❌ ENDPOINTS   <none>
+#   (en versiones recientes puede aparecer un aviso de que
+#    Endpoints está obsoleto en favor de EndpointSlices; se
+#    puede ignorar)
+#
+# ---- 3. Arreglarlo ----
+#   kubectl apply -f 04-web-ready-ok.yaml
+# -------------------------------------------------------------

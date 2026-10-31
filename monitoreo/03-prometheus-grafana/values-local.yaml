@@ -1,0 +1,32 @@
+# =============================================================
+# Valores reducidos para kube-prometheus-stack en clúster local
+# -------------------------------------------------------------
+# Módulo 7 · Sesión 8
+#
+# El stack completo es pesado para Docker Desktop o equipos con
+# poca memoria. Estos valores recortan lo que no hace falta en
+# una demostración.
+#
+# USO:
+#   helm install prometheus prometheus-community/kube-prometheus-stack -n monitoring --create-namespace -f values-local.yaml
+# =============================================================
+
+# Alertmanager no se usa en la demostración
+alertmanager:
+  enabled: false
+
+grafana:
+  adminPassword: prom-operator      # es el valor por defecto del chart
+
+prometheus:
+  prometheusSpec:
+    retention: 2d                   # conservar solo 2 días de historial
+    resources:
+      requests:
+        memory: 400Mi
+
+# Si el Pod "prometheus-prometheus-node-exporter" queda en
+# CrashLoopBackOff (puede ocurrir en algunos clústeres locales),
+# descomente estas dos líneas y ejecute "helm upgrade":
+# nodeExporter:
+#   enabled: false

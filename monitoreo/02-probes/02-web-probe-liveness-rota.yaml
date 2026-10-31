@@ -1,0 +1,75 @@
+# =============================================================
+# Liveness Probe rota a propósito
+# -------------------------------------------------------------
+# Módulo 7 · Sesión 8
+#
+# Es el mismo Deployment web-probe del archivo anterior, con UN
+# solo cambio: el path de la LIVENESS pasa de "/" a "/noexiste".
+#
+# QUÉ OCURRE:
+#   nginx responde 404 a /noexiste → la probe falla 2 veces
+#   seguidas → el kubelet reinicia el contenedor → vuelve a
+#   fallar → el ciclo se repite hasta CrashLoopBackOff.
+#
+# La readiness sigue apuntando a "/", por eso el Pod se mantiene
+# Ready aunque se reinicie: el síntoma visible es RESTARTS.
+# =============================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-probe
+  namespace: lab-s8
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: web-probe
+  template:
+    metadata:
+      labels:
+        app: web-probe
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.25
+        ports:
+        - containerPort: 80
+        livenessProbe:
+          httpGet:
+            path: /noexiste            # ← EL CAMBIO: ruta que devuelve 404
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          failureThreshold: 2
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          periodSeconds: 5
+
+# -------------------------------------------------------------
+# CÓMO PROBARLO
+# -------------------------------------------------------------
+# kubectl apply -f 02-web-probe-liveness-rota.yaml
+#
+# ---- 1. Observar los reinicios (Ctrl+C para salir) ----
+#   kubectl get pods -w
+#   ❌ la columna RESTARTS sube cada ~15 a 20 segundos
+#   ❌ con el tiempo el STATUS pasa a CrashLoopBackOff
+#
+# ---- 2. Leer los eventos ----
+#   kubectl get events --sort-by=.lastTimestamp
+#   Buscar:
+#     Liveness probe failed: HTTP probe failed with statuscode: 404
+#     Container nginx failed liveness probe, will be restarted
+#
+# ---- 3. Leer los logs del contenedor ANTERIOR al reinicio ----
+#   kubectl get pods
+#   kubectl logs NOMBRE-DEL-POD --previous
+#   Se ven líneas "GET /noexiste" con código 404 hechas por
+#   kube-probe: son las peticiones del propio kubelet.
+#
+# ---- 4. Arreglarlo ----
+#   kubectl apply -f 01-web-probe.yaml
+#   ✅ el Pod nuevo queda 1/1 Running con RESTARTS en 0
+# -------------------------------------------------------------

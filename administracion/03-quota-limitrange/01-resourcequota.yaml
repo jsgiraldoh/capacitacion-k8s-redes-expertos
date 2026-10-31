@@ -1,0 +1,33 @@
+# =============================================================
+# ResourceQuota: el techo TOTAL del namespace
+# -------------------------------------------------------------
+# Módulo 8 · Sesión 8
+#
+# Limita cuánto puede consumir el namespace entero, sumando todos
+# sus Pods. Evita que un equipo se coma el clúster.
+#
+# CONSECUENCIA IMPORTANTE:
+# Cuando un namespace tiene cuota de CPU o memoria, TODOS los Pods
+# deben declarar requests y limits. Si no lo hacen, se rechazan.
+# Ahí entra el LimitRange del archivo 03.
+# =============================================================
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: cuota-lab
+  namespace: lab-quota
+spec:
+  hard:
+    requests.cpu: "1"
+    requests.memory: "1Gi"
+    limits.cpu: "2"
+    limits.memory: "2Gi"
+    pods: "5"
+
+# -------------------------------------------------------------
+# CÓMO PROBARLO
+# -------------------------------------------------------------
+# kubectl apply -f 01-resourcequota.yaml
+# kubectl describe quota cuota-lab -n lab-quota
+#   ✅ columnas Used (todo en 0) y Hard (los techos)
+# -------------------------------------------------------------
