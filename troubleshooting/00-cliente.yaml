@@ -1,0 +1,29 @@
+# =============================================================
+# Pod cliente con herramientas de red (netshoot)
+# -------------------------------------------------------------
+# Módulo 9 · Sesión 9
+#
+# Contiene curl, nslookup y dig. Sirve para probar conectividad
+# desde DENTRO del clúster en los escenarios de red (07 a 09):
+#   kubectl exec deploy/cliente -n lab-ts -- curl -s -m 3 http://NOMBRE
+#   kubectl exec deploy/cliente -n lab-ts -- nslookup NOMBRE
+# =============================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cliente
+  namespace: lab-ts
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cliente
+  template:
+    metadata:
+      labels:
+        app: cliente
+    spec:
+      containers:
+      - name: netshoot
+        image: nicolaka/netshoot
+        command: ["sleep", "infinity"]

@@ -1,0 +1,37 @@
+# =============================================================
+# ESCENARIO 04 · CreateContainerConfigError
+# -------------------------------------------------------------
+# Módulo 9 · Sesión 9
+#
+# EL FALLO: el contenedor toma la variable DB_PASS de un Secret
+# llamado credenciales-db, que no existe. El kubelet no puede
+# preparar el contenedor y el Pod queda en
+# CreateContainerConfigError.
+#
+# El Secret se crea DESPUÉS: el kubelet reintenta y el Pod
+# arranca solo, sin recrearlo.
+# =============================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-secret
+  namespace: lab-ts
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: api-secret
+  template:
+    metadata:
+      labels:
+        app: api-secret
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.25
+        env:
+        - name: DB_PASS
+          valueFrom:
+            secretKeyRef:
+              name: credenciales-db   # ← este Secret no existe
+              key: DB_PASS

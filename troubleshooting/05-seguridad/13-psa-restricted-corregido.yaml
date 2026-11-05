@@ -1,0 +1,26 @@
+# =============================================================
+# ESCENARIO 13 · Pod corregido (solución)
+# -------------------------------------------------------------
+# Módulo 9 · Sesión 9
+#
+# Cumple el nivel "restricted": los cuatro campos que el mensaje
+# de Pod Security Admission pedía, más una imagen que corre sin
+# privilegios (nginx-unprivileged usa el usuario 101).
+# =============================================================
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-psa
+  namespace: lab-psa
+spec:
+  securityContext:
+    runAsNonRoot: true
+    seccompProfile:
+      type: RuntimeDefault
+  containers:
+  - name: nginx
+    image: nginxinc/nginx-unprivileged:1.25
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop: ["ALL"]

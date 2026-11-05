@@ -22,6 +22,7 @@ tema. Los archivos están numerados en el orden en que se aplican.
 | [`rbac/`](rbac/) | 6 | 6 | Role, RoleBinding, ClusterRole y ClusterRoleBinding, con User, Group y ServiceAccount |
 | [`monitoring/`](monitoring/) | 7 | 8 | Metrics Server, probes, eventos y logs, Prometheus y Grafana |
 | [`administration/`](administration/) | 8 | 8 | Mantenimiento de nodos, requests y limits, ResourceQuota, LimitRange y HPA |
+| [`troubleshooting/`](troubleshooting/) | 9 | 9 | Método de diagnóstico, 15 escenarios rotos a propósito y laboratorio integrador |
 
 ---
 
@@ -48,6 +49,8 @@ rbac/             No todos deben poder hacer todo: quién puede hacer qué.
 monitoring/       Ver qué pasa: métricas, probes, eventos y logs.
   ↓
 administration/   Operar: mantener nodos, poner límites y escalar solo.
+  ↓
+troubleshooting/  Cuando algo falla: el método para diagnosticar.
 ```
 
 ---
@@ -68,9 +71,9 @@ Fijar el namespace en el contexto evita tener que escribir `-n` en cada
 comando. Es el mismo mecanismo del archivo `~/.kube/config` que vimos en la
 Sesión 1.
 
-Las carpetas `rbac/`, `monitoring/` y `administration/` crean sus propios
+Las carpetas `rbac/`, `monitoring/`, `administration/` y `troubleshooting/` crean sus propios
 namespaces de laboratorio (`equipo-a`, `equipo-b`, `lab-s8`, `lab-quota`,
-`lab-hpa`) y declaran el namespace de forma explícita en cada manifiesto.
+`lab-hpa`, `lab-ts`, `lab-psa`, `lab-ts-backend`, `lab-roto`) y declaran el namespace de forma explícita en cada manifiesto.
 
 ---
 
@@ -196,7 +199,6 @@ que eliminarlo a mano desde el panel de DigitalOcean.
 Temas del programa que aún no tienen ejemplos en este repositorio:
 
 - Ingress, DNS interno y Network Policies (resto del Módulo 4)
-- Troubleshooting (Módulo 9)
 - Laboratorio final integrador
 
 ---
@@ -211,7 +213,7 @@ reflejan en el clúster de forma automática. Eso lo convierte, además de en
 material de estudio, en una demostración viva de GitOps.
 
 > **Aviso sobre los laboratorios.** Varios manifiestos de `rbac/`,
-> `monitoring/` y `administration/` son ejercicios que fallan **a propósito**
+> `monitoring/`, `administration/` y `troubleshooting/` son ejercicios que fallan **a propósito**
 > (probes rotas, un Pod que pide 500 Gi, un Pod que termina en `OOMKilled`,
 > un Deployment que supera su cuota) y algunos modifican el comportamiento
 > del namespace (ResourceQuota, LimitRange). Si la aplicación de Argo CD

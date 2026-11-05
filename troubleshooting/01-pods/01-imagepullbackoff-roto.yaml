@@ -1,0 +1,28 @@
+# =============================================================
+# ESCENARIO 01 · ImagePullBackOff
+# -------------------------------------------------------------
+# Módulo 9 · Sesión 9
+#
+# EL FALLO: la etiqueta de la imagen no existe (nginx:1.25.99).
+# El kubelet intenta descargarla, no la encuentra y reintenta con
+# esperas cada vez más largas: ErrImagePull y luego
+# ImagePullBackOff.
+# =============================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-imagen
+  namespace: lab-ts
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: web-imagen
+  template:
+    metadata:
+      labels:
+        app: web-imagen
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.25.99          # ← esta etiqueta no existe

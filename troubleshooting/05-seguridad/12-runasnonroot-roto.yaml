@@ -1,0 +1,32 @@
+# =============================================================
+# ESCENARIO 12 · runAsNonRoot con una imagen que corre como root
+# -------------------------------------------------------------
+# Módulo 9 · Sesión 9
+#
+# EL FALLO: el securityContext exige runAsNonRoot: true, pero la
+# imagen oficial nginx arranca como root. El kubelet se niega a
+# crear el contenedor: CreateContainerConfigError.
+#
+# Es un fallo "de seguridad que funciona": la protección hizo
+# exactamente su trabajo. Hay que cambiar la imagen, no la regla.
+# =============================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-noroot
+  namespace: lab-ts
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: web-noroot
+  template:
+    metadata:
+      labels:
+        app: web-noroot
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.25             # ← corre como root
+        securityContext:
+          runAsNonRoot: true          # ← la regla exige un usuario no root

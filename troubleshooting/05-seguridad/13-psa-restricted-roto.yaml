@@ -1,0 +1,28 @@
+# =============================================================
+# ESCENARIO 13 · Pod Security Admission (nivel restricted)
+# -------------------------------------------------------------
+# Módulo 9 · Sesión 9
+#
+# EL FALLO: el namespace lab-psa tiene la etiqueta
+#   pod-security.kubernetes.io/enforce: restricted
+# y el Pod no declara ninguno de los requisitos de ese nivel.
+# El API Server lo RECHAZA al crearlo: el Pod nunca existe.
+#
+# Al aplicar este archivo, el Namespace se crea y el Pod falla.
+# =============================================================
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: lab-psa
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-psa
+  namespace: lab-psa
+spec:
+  containers:
+  - name: nginx
+    image: nginx:1.25                 # ← sin securityContext

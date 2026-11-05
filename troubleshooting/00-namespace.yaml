@@ -1,0 +1,14 @@
+# =============================================================
+# Namespace lab-ts
+# -------------------------------------------------------------
+# Módulo 9 · Sesión 9
+#
+# Namespace de trabajo de casi todos los escenarios de
+# troubleshooting. Aplicar PRIMERO:
+#   kubectl apply -f 00-namespace.yaml
+#   kubectl config set-context --current --namespace=lab-ts
+# =============================================================
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: lab-ts

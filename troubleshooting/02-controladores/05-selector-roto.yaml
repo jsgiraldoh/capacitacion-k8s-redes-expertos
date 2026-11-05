@@ -1,0 +1,30 @@
+# =============================================================
+# ESCENARIO 05 · selector que no coincide con las labels
+# -------------------------------------------------------------
+# Módulo 9 · Sesión 9
+#
+# EL FALLO: el selector del Deployment busca app=web, pero las
+# etiquetas del Pod son app=webapp. El Deployment no podría
+# encontrar nunca sus propios Pods.
+#
+# A DIFERENCIA DE LOS DEMÁS ESCENARIOS, este falla en el
+# momento de aplicar: el API Server lo rechaza. No se crea nada.
+# =============================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-selector
+  namespace: lab-ts
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: web                        # ← busca app=web
+  template:
+    metadata:
+      labels:
+        app: webapp                   # ← pero el Pod se etiqueta app=webapp
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.25

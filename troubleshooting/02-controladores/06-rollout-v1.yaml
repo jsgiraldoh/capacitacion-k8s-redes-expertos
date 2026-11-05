@@ -1,0 +1,26 @@
+# =============================================================
+# ESCENARIO 06 · Rollout atascado (versión 1, sana)
+# -------------------------------------------------------------
+# Módulo 9 · Sesión 9
+#
+# Punto de partida: tres réplicas sanas de nginx:1.25.
+# Se aplica PRIMERO; luego 06-rollout-v2-roto.yaml.
+# =============================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-rollout
+  namespace: lab-ts
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: web-rollout
+  template:
+    metadata:
+      labels:
+        app: web-rollout
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.25

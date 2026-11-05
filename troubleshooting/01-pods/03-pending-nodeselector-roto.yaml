@@ -1,0 +1,30 @@
+# =============================================================
+# ESCENARIO 03 · Pending por nodeSelector
+# -------------------------------------------------------------
+# Módulo 9 · Sesión 9
+#
+# EL FALLO: el Pod exige un nodo con la etiqueta disktype=ssd y
+# ningún nodo la tiene. El Scheduler no puede programarlo y el
+# Pod queda en Pending indefinidamente. No hay contenedor, por
+# eso no hay logs: el motivo está en los EVENTOS.
+# =============================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-ssd
+  namespace: lab-ts
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: web-ssd
+  template:
+    metadata:
+      labels:
+        app: web-ssd
+    spec:
+      nodeSelector:
+        disktype: ssd                 # ← ningún nodo tiene esta etiqueta
+      containers:
+      - name: nginx
+        image: nginx:1.25

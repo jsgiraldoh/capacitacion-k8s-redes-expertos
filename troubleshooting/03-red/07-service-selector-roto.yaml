@@ -1,0 +1,44 @@
+# =============================================================
+# ESCENARIO 07 · Service sin endpoints
+# -------------------------------------------------------------
+# Módulo 9 · Sesión 9
+#
+# EL FALLO: el Pod tiene la etiqueta app=web-red, pero el Service
+# busca app=web-rojo (una letra distinta). El Service existe,
+# el Pod está Running y sano, pero no se encuentran: la lista
+# de ENDPOINTS queda vacía y nadie recibe tráfico.
+#
+# Es el fallo de red MÁS frecuente en Kubernetes.
+# =============================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-red
+  namespace: lab-ts
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: web-red
+  template:
+    metadata:
+      labels:
+        app: web-red
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.25
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-red
+  namespace: lab-ts
+spec:
+  selector:
+    app: web-rojo                     # ← no coincide con app=web-red
+  ports:
+  - port: 80
+    targetPort: 80

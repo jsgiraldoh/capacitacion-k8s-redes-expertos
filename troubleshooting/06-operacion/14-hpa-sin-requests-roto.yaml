@@ -1,0 +1,52 @@
+# =============================================================
+# ESCENARIO 14 · HPA con TARGETS <unknown>
+# -------------------------------------------------------------
+# Módulo 9 · Sesión 9
+#
+# EL FALLO: el HPA calcula el uso de CPU como porcentaje del
+# REQUEST. El Deployment no declara requests.cpu, así que el
+# porcentaje no se puede calcular y el HPA no escala nunca.
+#
+# REQUISITO: Metrics Server funcionando (Sesión 8). Si no lo
+# está, el mensaje del HPA es otro: ver el README.
+# =============================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cpu-app
+  namespace: lab-ts
+spec:
+  selector:
+    matchLabels:
+      app: cpu-app
+  template:
+    metadata:
+      labels:
+        app: cpu-app
+    spec:
+      containers:
+      - name: php-apache
+        image: registry.k8s.io/hpa-example
+        ports:
+        - containerPort: 80
+        # ← falta resources.requests.cpu
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: cpu-app
+  namespace: lab-ts
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: cpu-app
+  minReplicas: 1
+  maxReplicas: 3
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 50

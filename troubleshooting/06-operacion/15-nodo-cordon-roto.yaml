@@ -1,0 +1,32 @@
+# =============================================================
+# ESCENARIO 15 · Pending porque los nodos están en cordon
+# -------------------------------------------------------------
+# Módulo 9 · Sesión 9
+#
+# EL FALLO: este manifiesto es CORRECTO. El problema está en el
+# clúster: se hizo cordon a todos los nodos que reciben Pods y
+# se olvidó el uncordon. Los Pods nuevos no tienen dónde ir.
+#
+# ANTES de aplicar este archivo:
+#   kubectl cordon NOMBRE-DEL-NODO
+# (en un clúster de varios nodos, a todos los workers; el nodo
+# control-plane normalmente ya tiene un taint)
+# =============================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-cordon
+  namespace: lab-ts
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: app-cordon
+  template:
+    metadata:
+      labels:
+        app: app-cordon
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.25

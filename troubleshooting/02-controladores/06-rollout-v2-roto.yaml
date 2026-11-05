@@ -1,0 +1,30 @@
+# =============================================================
+# ESCENARIO 06 · Rollout atascado (versión 2, rota)
+# -------------------------------------------------------------
+# Módulo 9 · Sesión 9
+#
+# Se aplica DESPUÉS de 06-rollout-v1.yaml. Es el mismo Deployment
+# (web-rollout) con una imagen nueva que no existe: nginx:1.99.0.
+#
+# QUÉ DEMUESTRA: una actualización progresiva NO tumba lo que
+# funciona. Los Pods de la versión 1 siguen sirviendo mientras
+# el Pod nuevo no logra arrancar. La salida es rollout undo.
+# =============================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-rollout
+  namespace: lab-ts
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: web-rollout
+  template:
+    metadata:
+      labels:
+        app: web-rollout
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.99.0           # ← versión inexistente

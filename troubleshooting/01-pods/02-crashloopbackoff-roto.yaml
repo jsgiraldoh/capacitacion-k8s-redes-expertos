@@ -1,0 +1,41 @@
+# =============================================================
+# ESCENARIO 02 · CrashLoopBackOff
+# -------------------------------------------------------------
+# Módulo 9 · Sesión 9
+#
+# EL FALLO: la aplicación exige la variable DB_HOST y, si no
+# existe, imprime un error y termina con código 1. Kubernetes
+# reinicia el contenedor una y otra vez (CrashLoopBackOff).
+#
+# El Pod ARRANCA bien: la imagen existe y el contenedor se
+# ejecuta. Por eso describe no muestra un error de descarga.
+# El motivo está en los LOGS de la aplicación.
+# =============================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-config
+  namespace: lab-ts
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: app-config
+  template:
+    metadata:
+      labels:
+        app: app-config
+    spec:
+      containers:
+      - name: app
+        image: busybox:1.36
+        command: ["/bin/sh", "-c"]
+        args:
+        - |
+          if [ -z "$DB_HOST" ]; then
+            echo "ERROR: falta la variable DB_HOST" >&2
+            exit 1
+          fi
+          echo "conectado a $DB_HOST"
+          sleep 3600
+        # ← falta la sección env con DB_HOST

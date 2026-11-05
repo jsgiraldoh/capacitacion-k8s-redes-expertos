@@ -1,0 +1,42 @@
+# =============================================================
+# ESCENARIO 09 · DNS entre namespaces (cliente roto)
+# -------------------------------------------------------------
+# Módulo 9 · Sesión 9
+#
+# Se aplica DESPUÉS de 09-dns-backend.yaml, que crea el Service
+# "api" en el namespace lab-ts-backend.
+#
+# EL FALLO: este cliente vive en lab-ts y llama a http://api.
+# El nombre corto solo resuelve dentro del MISMO namespace. Para
+# llegar a otro hay que usar api.lab-ts-backend.
+# =============================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cliente-dns
+  namespace: lab-ts
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cliente-dns
+  template:
+    metadata:
+      labels:
+        app: cliente-dns
+    spec:
+      containers:
+      - name: netshoot
+        image: nicolaka/netshoot
+        command: ["/bin/sh", "-c"]
+        args:
+        - |
+          while true; do
+            if curl -s -m 2 -o /dev/null http://api; then
+              echo "OK: api responde"
+            else
+              echo "FALLO: no se pudo conectar a http://api"
+            fi
+            sleep 5
+          done
+                                      # ← el nombre correcto es api.lab-ts-backend

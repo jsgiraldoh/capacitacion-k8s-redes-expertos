@@ -1,0 +1,51 @@
+# =============================================================
+# ESCENARIO 11 · 403 Forbidden por RBAC
+# -------------------------------------------------------------
+# Módulo 9 · Sesión 9
+#
+# EL FALLO: la aplicación usa el ServiceAccount sa-lector y
+# consulta la lista de Pods del namespace, pero ese ServiceAccount
+# no tiene ningún Role. El API Server responde 403 Forbidden.
+#
+# El Pod está Running: desde fuera todo parece normal. El fallo
+# solo se ve en los LOGS de la aplicación.
+#
+# NOTA: $$( ) evita que Kubernetes interprete $( ) como una
+# variable de entorno y lo deja como sustitución de comandos.
+# =============================================================
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: sa-lector
+  namespace: lab-ts
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: consulta
+  namespace: lab-ts
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: consulta
+  template:
+    metadata:
+      labels:
+        app: consulta
+    spec:
+      serviceAccountName: sa-lector
+      containers:
+      - name: curl
+        image: curlimages/curl:latest
+        command: ["/bin/sh", "-c"]
+        args:
+        - |
+          API=https://kubernetes.default.svc
+          TOKEN=$$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
+          while true; do
+            code=$$(curl -sk -o /tmp/r -w "%{http_code}" -H "Authorization: Bearer $TOKEN" $API/api/v1/namespaces/lab-ts/pods)
+            echo "HTTP $code"
+            if [ "$code" != "200" ]; then grep '"message"' /tmp/r; fi
+            sleep 10
+          done

@@ -1,0 +1,43 @@
+# =============================================================
+# ESCENARIO 08 · targetPort equivocado
+# -------------------------------------------------------------
+# Módulo 9 · Sesión 9
+#
+# EL FALLO: nginx escucha en el puerto 80, pero el Service envía
+# el tráfico al puerto 8080 del Pod. El selector SÍ coincide, así
+# que los endpoints existen (con el puerto equivocado) y el
+# fallo es más difícil de ver: no hay estado de error por ningún
+# lado, solo conexiones rechazadas.
+# =============================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-puerto
+  namespace: lab-ts
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: web-puerto
+  template:
+    metadata:
+      labels:
+        app: web-puerto
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.25
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-puerto
+  namespace: lab-ts
+spec:
+  selector:
+    app: web-puerto
+  ports:
+  - port: 80
+    targetPort: 8080                  # ← nginx escucha en 80, no en 8080

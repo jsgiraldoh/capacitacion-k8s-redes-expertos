@@ -1,0 +1,50 @@
+# =============================================================
+# ESCENARIO 10 · PVC en Pending por StorageClass inexistente
+# -------------------------------------------------------------
+# Módulo 9 · Sesión 9
+#
+# EL FALLO: el PVC pide la StorageClass "ssd-premium", que no
+# existe en el clúster. Nadie puede aprovisionar el disco: el PVC
+# queda en Pending y el Pod que lo usa también.
+#
+# DETALLE IMPORTANTE: storageClassName NO se puede modificar en
+# un PVC existente. La solución es borrar el PVC y crearlo de nuevo.
+# =============================================================
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: datos-pvc
+  namespace: lab-ts
+spec:
+  accessModes:
+  - ReadWriteOnce
+  storageClassName: ssd-premium       # ← esta StorageClass no existe
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-datos
+  namespace: lab-ts
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: app-datos
+  template:
+    metadata:
+      labels:
+        app: app-datos
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.25
+        volumeMounts:
+        - name: datos
+          mountPath: /data
+      volumes:
+      - name: datos
+        persistentVolumeClaim:
+          claimName: datos-pvc

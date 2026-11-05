@@ -1,0 +1,207 @@
+# =============================================================
+# LABORATORIO INTEGRADOR · "El clúster roto"
+# -------------------------------------------------------------
+# Módulo 9 · Sesión 9
+#
+# Seis aplicaciones en el namespace lab-roto. Cada una tiene UN
+# fallo distinto, de los que se practicaron en los escenarios
+# 01 a 14. Nada falla en el momento de aplicar: todo se ve en el
+# estado de los recursos.
+#
+# OBJETIVO: dejar las seis aplicaciones funcionando.
+# No hay que cambiar la imagen ni el código de ninguna: solo
+# configuración de Kubernetes.
+#
+# Las soluciones están en SOLUCIONES.md. No las abra hasta
+# haber diagnosticado cada fallo con el método.
+# =============================================================
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: lab-roto
+---
+# ---------- 1. tienda ----------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tienda
+  namespace: lab-roto
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tienda
+  template:
+    metadata:
+      labels:
+        app: tienda
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.25-alpin
+---
+# ---------- 2. catalogo ----------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: catalogo
+  namespace: lab-roto
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: catalogo
+  template:
+    metadata:
+      labels:
+        app: catalogo
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.25
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: catalogo
+  namespace: lab-roto
+spec:
+  selector:
+    app: catalogos
+  ports:
+  - port: 80
+    targetPort: 80
+---
+# ---------- 3. reportes ----------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reportes
+  namespace: lab-roto
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: reportes
+  template:
+    metadata:
+      labels:
+        app: reportes
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.25
+        env:
+        - name: REPORT_MODE
+          valueFrom:
+            configMapKeyRef:
+              name: reportes-config
+              key: MODE
+---
+# ---------- 4. archivos ----------
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: archivos-pvc
+  namespace: lab-roto
+spec:
+  accessModes:
+  - ReadWriteOnce
+  storageClassName: rapido
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: archivos
+  namespace: lab-roto
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: archivos
+  template:
+    metadata:
+      labels:
+        app: archivos
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.25
+        volumeMounts:
+        - name: datos
+          mountPath: /data
+      volumes:
+      - name: datos
+        persistentVolumeClaim:
+          claimName: archivos-pvc
+---
+# ---------- 5. monitor ----------
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: sa-monitor
+  namespace: lab-roto
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: monitor
+  namespace: lab-roto
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: monitor
+  template:
+    metadata:
+      labels:
+        app: monitor
+    spec:
+      serviceAccountName: sa-monitor
+      containers:
+      - name: curl
+        image: curlimages/curl:latest
+        command: ["/bin/sh", "-c"]
+        args:
+        - |
+          API=https://kubernetes.default.svc
+          TOKEN=$$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
+          while true; do
+            code=$$(curl -sk -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $TOKEN" $API/api/v1/namespaces/lab-roto/pods)
+            echo "HTTP $code"
+            sleep 10
+          done
+---
+# ---------- 6. busquedas ----------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: busquedas
+  namespace: lab-roto
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: busquedas
+  template:
+    metadata:
+      labels:
+        app: busquedas
+    spec:
+      containers:
+      - name: app
+        image: busybox:1.36
+        command: ["/bin/sh", "-c"]
+        args:
+        - |
+          if [ -z "$INDEX_URL" ]; then
+            echo "ERROR: falta INDEX_URL" >&2
+            exit 1
+          fi
+          echo "indexando en $INDEX_URL"
+          sleep 3600
